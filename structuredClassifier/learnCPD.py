@@ -24,7 +24,7 @@ from rpi_d3m_primitives.structuredClassifier.helper import getlistRV, getNewStat
 import copy
 #getlistRV, getNewState, changeCPD
 
-def learnCPDAllD( dataMatrix, stateNo, parents, alpha, debug = False, weighted = False, wVec = [], bayesInf = False):
+def learnCPDAllD( dataMatrix, stateNo, parents, alpha, N0, debug = False, weighted = False, wVec = [], bayesInf = False, PointInf = False):
     
     N = np.size( dataMatrix,0)
     D = len( parents)
@@ -78,20 +78,22 @@ def learnCPDAllD( dataMatrix, stateNo, parents, alpha, debug = False, weighted =
                         #K_i,
                         counts = np.sum( stateApply,0)
                         #K_i x1 olmali # Check type make sure 0.
-                        if not bayesInf: #MLE 
-                            
+                        if not bayesInf: 
+                            # MLE
                             estimatedPi = np.expand_dims(counts / np.sum(counts),1)
                         else:
                                                     
                             Nt = np.sum( counts)
-                            estMLE = counts/Nt                                   #K_i
-                            #estPrior = 0
-                            #estPrior = np.sum(indxI,0) / np.size(indxI,0)       #K_i                                     
-                            #post = Nt/(Nt+N0)*estMLE + N0/(Nt+N0)*estPrior         #K_i                            
-                            #estimatedPi = np.expand_dims(post,1)    
-                            
-                            #this line is for bayesian inference
-                            estimatedPi = (counts + alpha)/(Nt + alpha * stateNo[i])#bayesian inference
+                            estMLE = counts/Nt                              
+                            if PointInf:
+                                # this part is for MAP point inference
+                                estPrior = 0
+                                estPrior = np.sum(indxI,0) / np.size(indxI,0)       #K_i                                     
+                                post = Nt/(Nt+N0)*estMLE + N0/(Nt+N0)*estPrior         #K_i                            
+                                estimatedPi = np.expand_dims(post,1)    
+                            elif not PointInf:
+                                #this line is for bayesian inference
+                                estimatedPi = (counts + alpha)/(Nt + alpha * stateNo[i])#bayesian inference
                             
                     else:
                         
@@ -110,16 +112,18 @@ def learnCPDAllD( dataMatrix, stateNo, parents, alpha, debug = False, weighted =
 #                        print('Putting uniform since no state')
                     #Put uniform and put a check on 
                     if not bayesInf:
-                        
+                        # MLE
                         estimatedPi = np.ones([stateNo[i],1])/stateNo[i]
                     else:
-                            
-                        #estPrior = np.sum(indxI,0) / np.size(indxI,0)       #K_i                                     
-                        #post = estPrior                                     #K_i                            
-                        #estimatedPi = np.expand_dims(post,1)
                         
-                        #this line is the new one for bayesian inference. 
-                        estimatedPi = np.ones([stateNo[i],1])/stateNo[i]#Bayesian inference same as MAP                            
+                        if PointInf:
+                            # this part is for MAP point inference
+                            estPrior = np.sum(indxI,0) / np.size(indxI,0)       #K_i                                     
+                            post = estPrior                                     #K_i                            
+                            estimatedPi = np.expand_dims(post,1)
+                        elif not PointInf:
+                            #this line is the new one for bayesian inference. 
+                            estimatedPi = np.ones([stateNo[i],1])/stateNo[i]#Bayesian inference same as MAP                            
                         
                     setDimWithIndx( CPD[i], state, 0, estimatedPi)
                     #Write setIndx

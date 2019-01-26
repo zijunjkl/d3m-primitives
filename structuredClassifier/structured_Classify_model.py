@@ -12,10 +12,12 @@ import numpy as np
 
 class Model():
     
-    def __init__( self, modelName, bayesInf, alpha = 1):
+    def __init__( self, modelName, bayesInf, PointInf, alpha = 1, N0 = 5):
         
         self.modelName = modelName
         self.bayesInf = bayesInf
+        self.PointInf = PointInf
+        self.N0 = N0
         self.alpha = alpha
         self.stateNo = []
         self.parents = []
@@ -43,9 +45,10 @@ class Model():
         for i in range(D):
             self.parents.append(bn.parents(i))
         
-    def learnParameters( self, train_data, train_labels, bayesInf, debug= False):
+    def learnParameters( self, train_data, train_labels, bayesInf, PointInf, debug= False):
         
         self.bayesInf = bayesInf
+        self.PointInf = PointInf
         if len(self.parents) == 0:
             print('Error')
         else:    
@@ -57,12 +60,12 @@ class Model():
                     if len( np.unique( trainMatrix[:,i])) != self.stateNo[i]:
                         print('Error ' + str(len( np.unique( trainMatrix[:,i]))) + ' != ' +str(self.stateNo[i]))
                         
-            self.CPD = learnCPDAllD( trainMatrix, self.stateNo, self.parents, alpha = self.alpha, bayesInf = self.bayesInf)    
+            self.CPD = learnCPDAllD( trainMatrix, self.stateNo, self.parents, alpha = self.alpha, N0 = self.N0, bayesInf = self.bayesInf, PointInf = self.PointInf)    
         
     def fit( self, train_data, train_labels, stateNo, debug= False, **kwargs):
         self.stateNo = stateNo
         self.learnStructure( train_data, train_labels, **kwargs)   
-        self.learnParameters( train_data, train_labels, self.bayesInf)        
+        self.learnParameters( train_data, train_labels, self.bayesInf, self.PointInf)        
         
     def predict( self, test_data):
         

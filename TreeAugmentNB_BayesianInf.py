@@ -24,7 +24,7 @@ import rpi_d3m_primitives
 Inputs = container.DataFrame
 Outputs = container.DataFrame
 
-__all__ = ('TreeAugmentNB',)
+__all__ = ('TreeAugmentNB_BayesianInf',)
 
 class Params(params.Params):
     pass
@@ -34,7 +34,7 @@ class Hyperparams(hyperparams.Hyperparams):
     pass
 
 
-class TreeAugmentNB(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
+class TreeAugmentNB_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
     A primitive which does classification based on tree-augmented naive bayes with Bayesian Inference
     """
@@ -49,8 +49,8 @@ class TreeAugmentNB(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hype
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
             'uris': [
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives/blob/master/Feature_Selector_model.py',
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives.git'
+                'https://github.com/zijun-rpi/d3m-primitives/blob/master/TreeAugmentNB.py',
+                'https://github.com/zijun-rpi/d3m-primitives.git'
                 ]
         },
         'installation':[
@@ -60,7 +60,7 @@ class TreeAugmentNB(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hype
 	            'version': rpi_d3m_primitives.__version__
             }
         ],
-        'python_path': 'd3m.primitives.classification.tree_augmented_naive_bayes.RPI',
+        'python_path': 'd3m.primitives.classification.tree_augmented_naive_bayes.BayesianInfRPI',
         'algorithm_types': [
             metadata_base.PrimitiveAlgorithmType.NAIVE_BAYES_CLASSIFIER],
         'primitive_family': metadata_base.PrimitiveFamily.CLASSIFICATION
@@ -74,7 +74,7 @@ class TreeAugmentNB(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hype
         self._training_outputs = None
         self._fitted = False
         self._target_columns_metadata: List[Dict] = None
-        self._clf = Model('tan', bayesInf=1)
+        self._clf = Model('tan', bayesInf=1, PointInf=0)
 
     def _store_target_columns_metadata(self, outputs: Outputs) -> None:
         outputs_length = outputs.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']

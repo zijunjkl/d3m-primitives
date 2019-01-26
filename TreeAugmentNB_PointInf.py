@@ -6,10 +6,9 @@ import typing
 import scipy.io
 import numpy as np
 from sklearn import preprocessing
+#from common_primitives import utils
 from collections import OrderedDict
 from typing import cast, Any, Dict, List, Union, Sequence, Optional, Tuple
-
-#from common_primitives import utils
 from d3m import container
 from d3m.metadata import base as metadata_base
 from d3m.metadata import hyperparams
@@ -25,7 +24,7 @@ import rpi_d3m_primitives
 Inputs = container.DataFrame
 Outputs = container.DataFrame
 
-__all__ = ('NaiveBayes',)
+__all__ = ('TreeAugmentNB_PointInf',)
 
 class Params(params.Params):
     pass
@@ -35,23 +34,23 @@ class Hyperparams(hyperparams.Hyperparams):
     pass
 
 
-class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
+class TreeAugmentNB_PointInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive which does naive bayes classification. Bayesian Inference is applied.
+    A primitive which does classification based on tree-augmented naive bayes with MAP Point Inference
     """
     
     metadata = metadata_base.PrimitiveMetadata({
-        'id': 'd63942d1-7a0f-47e9-8fcc-5f1e58dffa9b',
+        'id': 'e2ebd317-3e4b-4a4a-9a0f-51fcc963b80f',
         'version': '2.1.5',
-        'name': 'Naive Bayes Classifier',
-        'keywords': ['Naive Bayes','Bayesian Inference','Classification'],
-        'description': 'This algorithm is an implementation of Naive Bayes classification with Bayesian Inference',
+        'name': 'Tree-Augmented Naive Bayes Classifier',
+        'keywords': ['Tree-Augmented Naive Bayes','MAP Point Inference','Classification'],
+        'description': 'This algorithm is an implementation of Tree-augmented Naive Bayes classification. MAP Point Inference is applied.',
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
             'uris': [
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives/blob/master/Feature_Selector_model.py',
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives.git'
+                'https://github.com/zijun-rpi/d3m-primitives/blob/master/TreeAugmentNB.py',
+                'https://github.com/zijun-rpi/d3m-primitives.git'
                 ]
         },
         'installation':[
@@ -61,7 +60,7 @@ class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpa
 	            'version': rpi_d3m_primitives.__version__
             }
         ],
-        'python_path': 'd3m.primitives.classification.naive_bayes.RPI',
+        'python_path': 'd3m.primitives.classification.tree_augmented_naive_bayes.PointInfRPI',
         'algorithm_types': [
             metadata_base.PrimitiveAlgorithmType.NAIVE_BAYES_CLASSIFIER],
         'primitive_family': metadata_base.PrimitiveFamily.CLASSIFICATION
@@ -75,8 +74,8 @@ class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpa
         self._training_outputs = None
         self._fitted = False
         self._target_columns_metadata: List[Dict] = None
-        self._clf = Model('nb', bayesInf=1)
-    
+        self._clf = Model('tan', bayesInf=1, PointInf=1)
+
     def _store_target_columns_metadata(self, outputs: Outputs) -> None:
         outputs_length = outputs.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
 
@@ -96,7 +95,7 @@ class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpa
             
         self._target_columns_metadata = target_columns_metadata
         
-
+        
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         # set training labels
         [m,n] = inputs.shape
@@ -104,7 +103,7 @@ class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpa
         temp = list(outputs.iloc[:,0].values)
         for i in np.arange(len(temp)):
             self._training_outputs[i] = float(temp[i])
-        
+            
         # Update semantic types and prepare it for predicted targets
         self._store_target_columns_metadata(outputs)
         
@@ -129,7 +128,7 @@ class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpa
                     else:
                         self._training_inputs[i,column_index] = 'nan'
         self._fitted = False
-    
+
 
     def fit(self, *, timeout: float = None, iterations: int = None) -> None:
         if self._fitted:
@@ -145,11 +144,11 @@ class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpa
         # if original label value is starting from 0, label += 1
         discTrainset.remove()
         X_train = discTrainset.data - 1
-        Y_train = discTrainset.labels - 1 
+        Y_train = discTrainset.labels - 1
         bins = discTrainset.NUM_STATES
         stateNo = np.append(bins, len(np.unique(Y_train)))
         self._clf.fit(X_train, Y_train, stateNo)
-        
+
         self._fitted = True
 
         return CallResult(None)
@@ -194,15 +193,13 @@ class NaiveBayes(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpa
             output = self._clf.predict(X_test)
             if min(self._training_outputs) == 1:
                 output = output + 1
-            #output = [int(item) for item in output]
-            
+                
             # update metadata
             output = container.DataFrame(output, generate_metadata=False, source=self)
             output.metadata = inputs.metadata.clear(source=self, for_value=output, generate_metadata=True)
             
             for column_index, column_metadata in enumerate(self._target_columns_metadata):
                 output.metadata = output.metadata.update_column(column_index, column_metadata, source=self)
-
 
             return CallResult(output)
         else:

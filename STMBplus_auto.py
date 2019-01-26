@@ -48,8 +48,8 @@ class STMBplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hype
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
             'uris': [
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives/blob/master/Feature_Selector_model.py',
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives.git'
+                'https://github.com/zijun-rpi/d3m-primitives/blob/master/STMBplus_auto.py',
+                'https://github.com/zijun-rpi/d3m-primitives.git'
                 ]
             
         },

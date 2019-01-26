@@ -32,7 +32,7 @@ class Params(params.Params):
 class Hyperparams(hyperparams.Hyperparams):
     threshold = hyperparams.Hyperparameter[Union[int, float]](
         default=0.02,
-        description="A non-negative threshold for independence test. The number of selected features will be larger if the hyper-parameter is closer to zero.",
+        description="A non-negative threshold for independence test using mutual information. The number of selected features will be larger if the hyper-parameter is closer to zero.",
         semantic_types=['https://metadata.datadrivendiscovery.org/types/TuningParameter']
     )
 
@@ -53,8 +53,8 @@ class STMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpara
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
             'uris': [
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives/blob/master/Feature_Selector_model.py',
-                'https://gitlab.datadrivendiscovery.org/zcui/rpi-primitives.git'
+                'https://github.com/zijun-rpi/d3m-primitives/blob/master/STMBplus.py',
+                'https://github.com/zijun-rpi/d3m-primitives.git'
                 ]
         },
         'installation':[
@@ -64,7 +64,7 @@ class STMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpara
 	            'version': rpi_d3m_primitives.__version__
             }
         ],
-        'python_path': 'd3m.primitives.feature_selection.simultaneous_markov_blanket.Manual_RPI',
+        'python_path': 'd3m.primitives.feature_selection.simultaneous_markov_blanket.ManualRPI',
         'algorithm_types': [
             metadata_base.PrimitiveAlgorithmType.MINIMUM_REDUNDANCY_FEATURE_SELECTION
         ],
