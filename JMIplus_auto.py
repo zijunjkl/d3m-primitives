@@ -75,7 +75,10 @@ class JMIplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyper
         self._training_outputs = None
         self._fitted = False
         self._LEoutput = preprocessing.LabelEncoder()
-
+        
+    ## TO DO:
+    ## select columns via semantic types
+    ## remove preprocessing
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         
         # set problem type
@@ -111,6 +114,7 @@ class JMIplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyper
                     if bool(temp[i]):
                         self._training_inputs[i,column_index] = float(temp[i])
                     else:
+                        ## TO DO: float nan
                         self._training_inputs[i,column_index] = 'nan'
         self._fitted = False
 

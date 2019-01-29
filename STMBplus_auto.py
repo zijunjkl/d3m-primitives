@@ -77,7 +77,9 @@ class STMBplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hype
         self._fitted = False
         self._LEoutput = preprocessing.LabelEncoder()
         
-
+    ## TO DO
+    # select columns via semantic types
+    # remove preprocessing
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         
         # set problem type
@@ -114,6 +116,7 @@ class STMBplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hype
                     if bool(temp[i]):
                         self._training_inputs[i,column_index] = float(temp[i])
                     else:
+                        ## TO Do: float nan
                         self._training_inputs[i,column_index] = 'nan'
         self._fitted = False
 

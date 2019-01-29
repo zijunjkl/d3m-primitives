@@ -76,6 +76,9 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
         self._fitted = False
         self._LEoutput = preprocessing.LabelEncoder()        
 
+    ## TO Do
+    # select columns via semantic types
+    # remove preprocessing 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
         
         # set problem type
@@ -111,6 +114,7 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
                     if bool(temp[i]):
                         self._training_inputs[i,column_index] = float(temp[i])
                     else:
+                        ## To do: float nan
                         self._training_inputs[i,column_index] = 'nan'
         self._fitted = False
 
