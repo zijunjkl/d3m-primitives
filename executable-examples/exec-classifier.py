@@ -68,13 +68,13 @@ primitive = ExtractColumnsBySemanticTypesPrimitive(hyperparams=hyperparams_class
 call_metadata = primitive.produce(inputs=dataframe)
 trainL = call_metadata.value
 
-print('\nLabel Encoder')
-# step 5: label encoder for target labels
-encoder_hyperparams_class = UnseenLabelEncoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-encoder_primitive = UnseenLabelEncoderPrimitive(hyperparams=encoder_hyperparams_class.defaults())
-encoder_primitive.set_training_data(inputs=trainL)
-encoder_primitive.fit()
-trainL = encoder_primitive.produce(inputs=trainL).value
+#print('\nLabel Encoder')
+## step 5: label encoder for target labels
+#encoder_hyperparams_class = UnseenLabelEncoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+#encoder_primitive = UnseenLabelEncoderPrimitive(hyperparams=encoder_hyperparams_class.defaults())
+#encoder_primitive.set_training_data(inputs=trainL)
+#encoder_primitive.fit()
+#trainL = encoder_primitive.produce(inputs=trainL).value
 
 
 ########################################################################################
@@ -134,31 +134,31 @@ print(classifier._time)
 #decoder_primitive = UnseenLabelDecoderPrimitive(hyperparams=decoder_hyperparams_class.defaults().replace({'encoder': encoder_primitive}))
 #predictedTargets = decoder_primitive.produce(inputs=predictedTargets).value
 #
-#print('\nConstruct Predictions')
-#hyperparams_class = construct_predictions.ConstructPredictionsPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-#construct_primitive = construct_predictions.ConstructPredictionsPrimitive(hyperparams=hyperparams_class.defaults())
-#call_metadata = construct_primitive.produce(inputs=predictedTargets, reference=dataframe)
-#dataframe = call_metadata.value
-#
-#print('\ncompute scores')
-#path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/dataset_TEST/datasetDoc.json')
-##path = '/Users/zijun/Dropbox/38_sick/SCORE/dataset_TEST/datasetDoc.json'
-#dataset = container.Dataset.load('file://{uri}'.format(uri=path))
-#
-##target_idx = dataset.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
-#dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/Target')
-#dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/TrueTarget')
-#
-#hyperparams_class = compute_scores.ComputeScoresPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-#metrics_class = hyperparams_class.configuration['metrics'].elements
-#primitive = compute_scores.ComputeScoresPrimitive(hyperparams=hyperparams_class.defaults().replace({
-#            'metrics': [metrics_class({
-#                'metric': 'F1_MACRO',
-#                'pos_label': None,
-#                'k': None,
-#            })],
-#        }))
-#scores = primitive.produce(inputs=dataframe, score_dataset=dataset).value
+print('\nConstruct Predictions')
+hyperparams_class = construct_predictions.ConstructPredictionsPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+construct_primitive = construct_predictions.ConstructPredictionsPrimitive(hyperparams=hyperparams_class.defaults())
+call_metadata = construct_primitive.produce(inputs=predictedTargets, reference=dataframe)
+dataframe = call_metadata.value
+
+print('\ncompute scores')
+path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/dataset_TEST/datasetDoc.json')
+#path = '/Users/zijun/Dropbox/38_sick/SCORE/dataset_TEST/datasetDoc.json'
+dataset = container.Dataset.load('file://{uri}'.format(uri=path))
+
+#target_idx = dataset.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
+dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/Target')
+dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/TrueTarget')
+
+hyperparams_class = compute_scores.ComputeScoresPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+metrics_class = hyperparams_class.configuration['metrics'].elements
+primitive = compute_scores.ComputeScoresPrimitive(hyperparams=hyperparams_class.defaults().replace({
+            'metrics': [metrics_class({
+                'metric': 'F1_MACRO',
+                'pos_label': None,
+                'k': None,
+            })],
+        }))
+scores = primitive.produce(inputs=dataframe, score_dataset=dataset).value
 #
 ##groundtruth_path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/targets.csv')
 ##GT_label = pd.read_csv(groundtruth_path)
