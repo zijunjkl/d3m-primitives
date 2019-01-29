@@ -50,7 +50,7 @@ class NaiveBayes_PointInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
             'uris': [
-                'https://github.com/zijun-rpi/d3m-primitives/blob/master/NaiveBayes.py',
+                'https://github.com/zijun-rpi/d3m-primitives/blob/master/NaiveBayes_PointInf.py',
                 'https://github.com/zijun-rpi/d3m-primitives.git'
                 ]
         },
@@ -121,6 +121,8 @@ class NaiveBayes_PointInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
                 self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])  
+            elif 'http://schema.org/Text' in semantic_types:
+                pass
             else:
                 temp = list(inputs.iloc[:, column_index].values)
                 for i in np.arange(len(temp)):
@@ -163,6 +165,7 @@ class NaiveBayes_PointInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params
             discTrainset.discretize()
             discTrainset.remove()
             bins = discTrainset.NUM_STATES
+            
             # convert categorical values to numerical values in testing data
             metadata = inputs.metadata
             [m, n] = inputs.shape
@@ -176,6 +179,8 @@ class NaiveBayes_PointInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params
                     LE = preprocessing.LabelEncoder()
                     LE = LE.fit(inputs.iloc[:, column_index])
                     X_test[:, column_index] = LE.transform(inputs.iloc[:, column_index])
+                elif 'http://schema.org/Text' in semantic_types:
+                    pass
                 else:
                     temp = list(inputs.iloc[:, column_index].values)
                     for i in np.arange(len(temp)):

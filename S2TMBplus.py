@@ -35,15 +35,15 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive which selects a set of features condition on which the target is independent of other features. Score-based structure learning method is applied which is not requiring hyper-parameters.
+    A primitive that performs supervised structured feature selection to reduce input feature dimension. Input to this primitive should be a matrix of tabular numerical data, consisting of columns of features, and an array of labels. Output will be a reduced data matrix with metadata updated.
     """
     
     metadata = metadata_base.PrimitiveMetadata({
         'id': '9d1a2e58-5f97-386c-babd-5a9b4e9b6d6c',
         'version': '2.1.5',
         'name': 'S2TMBplus feature selector',
-        'keywords': ['Markov Blanket Discovery','Feature Selection'],
-        'description': 'This algorithm will learn a Markov Blanket of the target node in a score-based way. Removing false parent-children nodes and finding spouse nodes are done simultaneously and thus efficiency is improved. Nodes in the learned Markov Blanket will be the selected features',
+        'keywords': ['Feature Selection'],
+        'description': 'This primitive will select a subset of input features and thus reduce input feature dimension.', 
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
@@ -108,6 +108,8 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
                 self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])  
+            elif 'http://schema.org/Text' in semantic_types:
+                pass
             else:
                 temp = list(inputs.iloc[:, column_index].values)
                 for i in np.arange(len(temp)):
@@ -135,6 +137,17 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
         model = S2TMB(smallTrainSet, smallDiscTrainSet,
                      self._problem_type, test_set=validSet)
         index = model.select_features()
+        # Features with only one value should not be selected
+        remove = []
+        if not len(index) == 0:
+            for i in np.arange(len(index)):
+                if len(np.unique(self._training_inputs[:,i])) == 1:
+                    remove.append(i)
+        index = np.setdiff1d(index, remove)       
+        
+        if len(index) == 0:
+            index = np.arange(self._training_inputs.shape[1])
+
         self._index = []
         [m, ] = index.shape
         for ii in np.arange(m):

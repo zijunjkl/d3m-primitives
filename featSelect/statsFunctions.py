@@ -116,12 +116,19 @@ def getSquaredError(vector, edges):
     for i in range(hm_val):
         s = uni_val[i]
         if s == 1:
-            expect = len(vector)/(edges[1] - 1)
+            if not (edges[1] - 1) == 0:
+                expect = len(vector)/(edges[1] - 1) 
+            else:
+                expect = 0
             min_err = (len(vector) - expect) ** 2
             SEs.append(min_err)
             continue
-        N = np.histogram(vector, [1,s,max(uni_val)+1])[0]
+        temp = [1,s,max(uni_val)+1]
+        temp.sort()
+        temp = np.asarray(temp)
+        N = np.histogram(vector, temp)[0]
         expt_right = 0
+        expt_left = 0
         for e in range(len(edges)):
             if s > edges[e] and s <= edges[e+1]:
                 expt_left = N[0]/(s-edges[e])

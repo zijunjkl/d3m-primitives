@@ -113,6 +113,8 @@ class JMIplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
                 self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])
+            elif 'http://schema.org/Text' in semantic_types:
+                pass
             else:
                 temp = list(inputs.iloc[:, column_index].values)
                 for i in np.arange(len(temp)):

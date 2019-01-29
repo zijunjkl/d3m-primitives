@@ -7,15 +7,15 @@ def mergeArrays(firstVector, secondVector, length):
         length = firstVector.size
     
     results = normalize_array(firstVector, 0)
-    firstNumStates = results[0]
-    firstNormalisedVector = results[1]
+    #firstNumStates = results[0]
+    #firstNormalisedVector = results[1]
     
     results = normalize_array(secondVector, 0)
-    secondNumStates = results[0]
-    secondNormalisedVector = results[1]
+    #secondNumStates = results[0]
+    #secondNormalisedVector = results[1]
     
     stateCount = 1
-    stateMap = np.zeros(shape = (firstNumStates*secondNumStates,))
+    #stateMap = np.zeros(shape = (firstNumStates*secondNumStates,))
     merge = np.zeros(shape =(length,))
 
     joint_states = np.column_stack((firstVector,secondVector))

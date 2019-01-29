@@ -6,96 +6,118 @@ from d3m import container, utils
 from common_primitives import utils as comUtils
 from d3m.metadata import base as metadata_base
 from d3m import metrics
-from d3m.primitives.datasets import DatasetToDataFrame
-from d3m.primitives.data import ExtractColumnsBySemanticTypes
-from d3m.primitives.data import ColumnParser
-from d3m.primitives.data import UnseenLabelEncoder, UnseenLabelDecoder
+from common_primitives.dataset_to_dataframe import DatasetToDataFramePrimitive
+from common_primitives.extract_columns_semantic_types import ExtractColumnsBySemanticTypesPrimitive
+from common_primitives.column_parser import ColumnParserPrimitive
+from common_primitives.unseen_label_encoder import UnseenLabelEncoderPrimitive
+from common_primitives.unseen_label_decoder import UnseenLabelDecoderPrimitive
 from common_primitives import construct_predictions
 from common_primitives import compute_scores
-import pandas as pd
 
-from rpi_d3m_primitives.aSTMBplus import aSTMBplus
-from rpi_d3m_primitives.aSTMBplus_auto import aSTMBplus_auto
 from rpi_d3m_primitives.JMIplus import JMIplus
 from rpi_d3m_primitives.JMIplus_auto import JMIplus_auto
-from rpi_d3m_primitives.STMBplus import STMBplus
 from rpi_d3m_primitives.STMBplus_auto import STMBplus_auto
-from rpi_d3m_primitives.IPCMBplus import IPCMBplus
-from rpi_d3m_primitives.IPCMBplus_auto import IPCMBplus_auto
 from rpi_d3m_primitives.S2TMBplus import S2TMBplus
 from rpi_d3m_primitives.NaiveBayes_PointInf import NaiveBayes_PointInf as NB_P
 from rpi_d3m_primitives.NaiveBayes_BayesianInf import NaiveBayes_BayesianInf as NB_B
-from rpi_d3m_primitives.TreeAugmentNB_PointInf import TreeAugmentNB_PointInf as TAN_P
-from rpi_d3m_primitives.TreeAugmentNB_BayesianInf import TreeAugmentNB_BayesianInf as TAN_B
-#import d3m.primitives.feature_selection.adaptive_simultaneous_markov_blanket as aSTMB
-#import d3m.primitives.classification.naive_bayes as NB
 
-dataset_name = '38_sick'
-#dataset_name = '185_baseball'
-#dataset_name = '27_wordLevels'
+# Classification
+#dataset_name = '38_sick'
+dataset_name = '185_baseball'
+#dataset_name = '27_wordLevels' 
+#dataset_name = 'uu4_SPECT'  #IPCMB takes time
+#dataset_name = '1491_one_hundred_plants_margin'
+#dataset_name = '313_spectrometer' 
+#dataset_name = '57_hypothyroid'
+#dataset_name = '4550_MiceProtein' 
+
+# Regerssion
+#dataset_name = '26_radon_seed'
+#dataset_name = '196_autoMpg'
+#dataset_name = '299_libras_move'
+#dataset_name = '534_cps_85_wages'
 
 print('\ndataset to dataframe')   
 # step 1: dataset to dataframe
 path = os.path.join('/Users/zijun/Dropbox/', dataset_name,'TRAIN/dataset_TRAIN/datasetDoc.json')
 dataset = container.Dataset.load('file://{uri}'.format(uri=path))
-hyperparams_class = DatasetToDataFrame.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = DatasetToDataFrame(hyperparams=hyperparams_class.defaults())
+hyperparams_class = DatasetToDataFramePrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+primitive = DatasetToDataFramePrimitive(hyperparams=hyperparams_class.defaults())
 call_metadata = primitive.produce(inputs=dataset)
 dataframe = call_metadata.value
 
 print('\nExtract Attributes')
 # step 2: Extract Attributes
-hyperparams_class = ExtractColumnsBySemanticTypes.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = ExtractColumnsBySemanticTypes(hyperparams=hyperparams_class.defaults().replace({'semantic_types': ['https://metadata.datadrivendiscovery.org/types/Attribute']}))
+hyperparams_class = ExtractColumnsBySemanticTypesPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+primitive = ExtractColumnsBySemanticTypesPrimitive(hyperparams=hyperparams_class.defaults().replace({'semantic_types': ['https://metadata.datadrivendiscovery.org/types/Attribute']}))
 call_metadata = primitive.produce(inputs=dataframe)
 trainD = call_metadata.value
 
-print('\nParse string into their types')
-# step 3: Parsing 
-hyperparams_class = ColumnParser.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = ColumnParser(hyperparams=hyperparams_class.defaults())
-call_metadata = primitive.produce(inputs=trainD)
-trainD = call_metadata.value
 
 # last column will be the true target for evaluation
 target_idx = trainD.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']+1
 
 print('\nExtract Targets')
 # step 4: extract targets
-hyperparams_class = ExtractColumnsBySemanticTypes.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = ExtractColumnsBySemanticTypes(hyperparams=hyperparams_class.defaults().replace({'semantic_types':['https://metadata.datadrivendiscovery.org/types/SuggestedTarget']}))
+hyperparams_class = ExtractColumnsBySemanticTypesPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+primitive = ExtractColumnsBySemanticTypesPrimitive(hyperparams=hyperparams_class.defaults().replace({'semantic_types':['https://metadata.datadrivendiscovery.org/types/SuggestedTarget']}))
 call_metadata = primitive.produce(inputs=dataframe)
 trainL = call_metadata.value
 
 print('\nLabel Encoder')
 # step 5: label encoder for target labels
-encoder_hyperparams_class = UnseenLabelEncoder.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-encoder_primitive = UnseenLabelEncoder(hyperparams=encoder_hyperparams_class.defaults())
+encoder_hyperparams_class = UnseenLabelEncoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+encoder_primitive = UnseenLabelEncoderPrimitive(hyperparams=encoder_hyperparams_class.defaults())
 encoder_primitive.set_training_data(inputs=trainL)
 encoder_primitive.fit()
 trainL = encoder_primitive.produce(inputs=trainL).value
 
 
 ########################################################################################
-print('\nFeature Selection')
+#print('\nFeature Selection: JMI')
+##step 6 feature selection
+#t = time.time()
+#hyperparams_class = JMIplus_auto.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+#FSmodel = JMIplus_auto(hyperparams=hyperparams_class.defaults())
+#FSmodel.set_training_data(inputs=trainD, outputs=trainL)        
+#FSmodel.fit()
+#elapsed = time.time() - t
+#print('\nSelected Feature Index')
+#print(FSmodel._index)
+#print('\n')
+
+print('\nFeature Selection: S2TMB')
 #step 6 feature selection
-hyperparams_class = STMBplus.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-FSmodel = STMBplus(hyperparams=hyperparams_class.defaults())
+t = time.time()
+hyperparams_class = S2TMBplus.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+FSmodel = S2TMBplus(hyperparams=hyperparams_class.defaults())
 FSmodel.set_training_data(inputs=trainD, outputs=trainL)        
 FSmodel.fit()
+elapsed = time.time() - t
 print('\nSelected Feature Index')
 print(FSmodel._index)
 print('\n')
+#
+
+#print('\nFeature Selection: STMB')
+##step 6 feature selection
+#t = time.time()
+#hyperparams_class = STMBplus_auto.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+#FSmodel = STMBplus_auto(hyperparams=hyperparams_class.defaults())
+#FSmodel.set_training_data(inputs=trainD, outputs=trainL)        
+#FSmodel.fit()
+#elapsed = time.time() - t
+#print('\nSelected Feature Index')
+#print(FSmodel._index)
+#print('\n')
+
 trainD = FSmodel.produce(inputs=trainD) 
 trainD = trainD.value
 
 
 print ('Classification phase: Naive Bayes classifier')
-hyperparams_class = NB_P.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-classifier = NB_P(hyperparams=hyperparams_class.defaults())
-#print ('Classification phase: TAN classifier')
-#hyperparams_class = TreeAugmentNB.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-#classifier = TreeAugmentNB(hyperparams=hyperparams_class.defaults())
+hyperparams_class = NB_B.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+classifier = NB_B(hyperparams=hyperparams_class.defaults())
 
 classifier.set_training_data(inputs=trainD, outputs=trainL)
 classifier.fit()
@@ -106,32 +128,31 @@ print ('\nLoad testing dataset')
 path = os.path.join('/Users/zijun/Dropbox/', dataset_name,'TEST/dataset_TEST/datasetDoc.json')
 #path = '/Users/zijun/Dropbox/38_sick/TEST/dataset_TEST/datasetDoc.json'
 dataset = container.Dataset.load('file://{uri}'.format(uri=path))
-hyperparams_class = DatasetToDataFrame.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = DatasetToDataFrame(hyperparams=hyperparams_class.defaults())
+hyperparams_class = DatasetToDataFramePrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+primitive = DatasetToDataFramePrimitive(hyperparams=hyperparams_class.defaults())
 call_metadata = primitive.produce(inputs=dataset)
 dataframe = call_metadata.value
 
 print('\nExtract Attributes')
-hyperparams_class = ExtractColumnsBySemanticTypes.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = ExtractColumnsBySemanticTypes(hyperparams=hyperparams_class.defaults().replace({'semantic_types': ['https://metadata.datadrivendiscovery.org/types/Attribute']}))
+hyperparams_class = ExtractColumnsBySemanticTypesPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+primitive = ExtractColumnsBySemanticTypesPrimitive(hyperparams=hyperparams_class.defaults().replace({'semantic_types': ['https://metadata.datadrivendiscovery.org/types/Attribute']}))
 call_metadata = primitive.produce(inputs=dataframe)
 testD = call_metadata.value
 
-print('\nParse string into their types')
-hyperparams_class = ColumnParser.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = ColumnParser(hyperparams=hyperparams_class.defaults())
-call_metadata = primitive.produce(inputs=testD)
-testD = call_metadata.value
 
 print('\nSubset of testing data')
 testD = FSmodel.produce(inputs=testD)
 testD = testD.value
 
 print('\nExtract Suggested Target')
-hyperparams_class = ExtractColumnsBySemanticTypes.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-primitive = ExtractColumnsBySemanticTypes(hyperparams=hyperparams_class.defaults().replace({'semantic_types': ['https://metadata.datadrivendiscovery.org/types/SuggestedTarget']}))
+hyperparams_class = ExtractColumnsBySemanticTypesPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+primitive = ExtractColumnsBySemanticTypesPrimitive(hyperparams=hyperparams_class.defaults().replace({'semantic_types': ['https://metadata.datadrivendiscovery.org/types/SuggestedTarget']}))
 call_metadata = primitive.produce(inputs=dataframe)
 testL = call_metadata.value
+
+print('\nGet Target Name')
+column_metadata = testL.metadata.query((metadata_base.ALL_ELEMENTS, 0))
+TargetName = column_metadata.get('name',[])
 
 print('\nClassifier Prediction')
 predictedTargets = classifier.produce(inputs=testD)
@@ -139,8 +160,8 @@ predictedTargets = predictedTargets.value
 #predictedTargets.metadata = comUtils.select_columns_metadata(testL.metadata, columns=[0])
 
 print('\nLabel Decoder')
-decoder_hyperparams_class = UnseenLabelDecoder.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-decoder_primitive = UnseenLabelDecoder(hyperparams=decoder_hyperparams_class.defaults().replace({'encoder': encoder_primitive}))
+decoder_hyperparams_class = UnseenLabelDecoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+decoder_primitive = UnseenLabelDecoderPrimitive(hyperparams=decoder_hyperparams_class.defaults().replace({'encoder': encoder_primitive}))
 predictedTargets = decoder_primitive.produce(inputs=predictedTargets).value
 
 print('\nConstruct Predictions')
@@ -154,9 +175,8 @@ path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/dataset_TEST/d
 #path = '/Users/zijun/Dropbox/38_sick/SCORE/dataset_TEST/datasetDoc.json'
 dataset = container.Dataset.load('file://{uri}'.format(uri=path))
 
-#target_idx = dataset.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
-dataset.metadata = dataset.metadata.add_semantic_type(('0', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/Target')
-dataset.metadata = dataset.metadata.add_semantic_type(('0', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/TrueTarget')
+dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/Target')
+dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/TrueTarget')
 
 hyperparams_class = compute_scores.ComputeScoresPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
 metrics_class = hyperparams_class.configuration['metrics'].elements
@@ -169,6 +189,17 @@ primitive = compute_scores.ComputeScoresPrimitive(hyperparams=hyperparams_class.
         }))
 scores = primitive.produce(inputs=dataframe, score_dataset=dataset).value
 
+#groundtruth_path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/targets.csv')
+#GT_label = pd.read_csv(groundtruth_path)
+#GT_label = container.ndarray(GT_label[TargetName])
+#y_pred = predictedTargets.iloc[:,0]
+#y_pred = [int(i) for i in y_pred]
+#scores = f1_score(GT_label, y_pred, average='macro')
+
+print('\nScore')
 print(scores)
+print('\n Computing time')
+print(elapsed)
+
 
 

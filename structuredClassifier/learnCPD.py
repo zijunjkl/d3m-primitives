@@ -84,17 +84,16 @@ def learnCPDAllD( dataMatrix, stateNo, parents, alpha, N0, debug = False, weight
                         else:
                                                     
                             Nt = np.sum( counts)
-                            estMLE = counts/Nt                              
                             if PointInf:
                                 # this part is for MAP point inference
+                                estMLE = counts/Nt
                                 estPrior = 0
                                 estPrior = np.sum(indxI,0) / np.size(indxI,0)       #K_i                                     
-                                post = Nt/(Nt+N0)*estMLE + N0/(Nt+N0)*estPrior         #K_i                            
-                                estimatedPi = np.expand_dims(post,1)    
+                                post = Nt/(Nt+N0)*estMLE + N0/(Nt+N0)*estPrior         #K_i                             
                             elif not PointInf:
                                 #this line is for bayesian inference
-                                estimatedPi = (counts + alpha)/(Nt + alpha * stateNo[i])#bayesian inference
-                            
+                                post = (counts + alpha)/(Nt + alpha * stateNo[i])#bayesian inference
+                            estimatedPi = np.expand_dims(post,1)   
                     else:
                         
                         counts = np.zeros( np.size(stateApply,1))

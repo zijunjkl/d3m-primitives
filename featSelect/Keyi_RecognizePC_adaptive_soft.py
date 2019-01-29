@@ -62,7 +62,7 @@ def find_PC_adpative(targets, ADJt, data, THRESHOLD, NumTest, hm_HypoTest):
                             CMIs.append([cond_mi])
                             if cond_mi <= THRESHOLD:
                                 NonPC = set(NonPC).union(set([X]))
-                                Sepset[X] = set(Sepset(X)).union(set(S),set([RestSet(addind)]))
+                                Sepset[X] = set(Sepset[X]).union(set(S),set([RestSet[addind]]))
                                 midBreakflag = 1
                                 break                                                    
                         else:

@@ -24,13 +24,14 @@ def combine_joint_dist_table(joint_dist, X, Y, part_X, part_Y, hm_HypoTest, sig_
                 num_sampy = np.array(num_sampy)
                 joint_idx = np.intersect1d(num_sampx, num_sampy)
                 hm_x, hm_y = get_num_value_HypoTest(X, Y, part_X, part_Y)
+                joint_idx = joint_idx.astype(int)
                 p_val = getPvalue_Chisquare(X[joint_idx], Y[joint_idx], hm_x, 1)
                 
                 if p_val > sig_level:
                     flag_vertical = 1
                     continue
                 else:
-                    hm_HypoTest = hm_HypoTest - 1
+                    #hm_HypoTest = hm_HypoTest - 1
                     prob = np.zeros((1,Len))
                     for k in range(Len):
                         get_indexes = lambda x, xs: [i for (y, i) in zip(xs, range(len(xs))) if y == x]
@@ -62,7 +63,7 @@ def combine_joint_dist_table(joint_dist, X, Y, part_X, part_Y, hm_HypoTest, sig_
                     flag_vertical = 1
                     continue
                 else:
-                    hm_HypoTest = hm_HypoTest - 1
+                    #hm_HypoTest = hm_HypoTest - 1
                     prob = np.zeros((1,Len))
                     flat_joint = X[joint_idx].flatten()
                     for k in range(Len):
@@ -105,7 +106,7 @@ def combine_joint_dist_table(joint_dist, X, Y, part_X, part_Y, hm_HypoTest, sig_
                 if p_val > sig_level:
                     continue
                 else:
-                    hm_HypoTest = hm_HypoTest - 1
+                    #hm_HypoTest = hm_HypoTest - 1
                     prob = np.zeros((1,Len))
                     for k in range(Len):
                         get_indexes = lambda x, xs: [i for (y, i) in zip(xs, range(len(xs))) if y == x]
@@ -138,7 +139,7 @@ def combine_joint_dist_table(joint_dist, X, Y, part_X, part_Y, hm_HypoTest, sig_
                 if p_val > sig_level:
                     continue
                 else:
-                    hm_HypoTest = hm_HypoTest - 1
+                    #hm_HypoTest = hm_HypoTest - 1
                     prob = np.zeros((1,Len))
                     for k in range(Len):
                         get_indexes = lambda x, xs: [i for (y, i) in zip(xs, range(len(xs))) if y == x]

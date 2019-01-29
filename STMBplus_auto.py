@@ -35,15 +35,15 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class STMBplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive which selects a set of features condition on which the target is independent of other features. Removing false parent-children nodes and finding spouse nodes are done simultaneously and thus more efficient. Hyper-parameter is selected via a bisection search and there is no hyper-parameter to tune.
+    A primitive that performs supervised structured feature selection to reduce input feature dimension. Input to this primitive should be a matrix of tabular numerical data, consisting of columns of features, and an array of labels. Output will be a reduced data matrix with metadata updated.
     """
     
     metadata = metadata_base.PrimitiveMetadata({
         'id': '9d1a2e58-5f97-386c-babd-5a9b4e9b6d6c',
         'version': '2.1.5',
         'name': 'STMBplus_auto feature selector',
-        'keywords': ['Markov Blanket Discovery','Feature Selection'],
-        'description': 'This algorithm will learn a Markov Blanket of the target node in a constraint-based way. Removing false parent-children nodes and finding spouse nodes are done simultaneously and thus efficiency is improved. In this algorithm, threshold is automatically selected in an empirical way and there is no hyper-parameter to tune. Nodes in the learned Markov Blanket will be the selected features',
+        'keywords': ['Feature Selection'],
+        'description': 'This primitive will select a subset of input features and thus reduce input feature dimension',
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
@@ -109,6 +109,8 @@ class STMBplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hype
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
                 self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])
+            elif 'http://schema.org/Text' in semantic_types:
+                pass
             else:
                 temp = list(inputs.iloc[:, column_index].values)
                 for i in np.arange(len(temp)):

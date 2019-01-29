@@ -68,7 +68,7 @@ class Predictor:
 
 		left_score = self.score(left_feats,cache)
 		right_score = self.score(right_feats,cache)
-		print(left_score, right_score)
+		#print(left_score, right_score)
 		if (self.left_performs_better(left_score,left_feats,right_score,right_feats)):
 			return left_feats,left_score
 		return right_feats,right_score

@@ -66,11 +66,11 @@ def MI_adaptive_soft(X, Y, hm_HypoTest):
     
     if m == 1 or n == 1:
         mutual_info = np.inf
-        result = []
-        result.append(mutual_info)
-        result.append(joint_dist)
-        result.append(hm_HypoTest)
-        return result
+        #result = []
+        #result.append(mutual_info)
+        #result.append(joint_dist)
+        #result.append(hm_HypoTest)
+        return mutual_info, joint_dist, hm_HypoTest
     #Estimate the joint probability mass by adaptive partitioning
     joint_dist, hm_HypoTest, isUniform = jointPDFAdapPartition(X, Y, m, n, hm_HypoTest)
     
@@ -101,8 +101,8 @@ def CMI_adaptive_pure_soft(X, Y, cond_set, hm_HypoTest):
         results.append(hm_HypoTest)
         return results
     
-    Cx,X = np.unique(X, return_inverse = True)
-    Cy,Y = np.unique(Y, return_inverse = True)
+    Cx, X = np.unique(X, return_inverse = True)
+    Cy, Y = np.unique(Y, return_inverse = True)
     
     m = len(Cx)
     n = len(Cy)
@@ -134,11 +134,13 @@ def CMI_adaptive_pure_soft(X, Y, cond_set, hm_HypoTest):
         
         C1,var_1 = np.unique(X, return_inverse = True)
         C2,var_2 = np.unique(Y, return_inverse = True)
+        #C1 = np.unique(X, return_inverse = True)
+        #C2 = np.unique(Y, return_inverse = True)
         
         p = len(C1)
         q = len(C2)
         
-        joint_set, hm_HypoTest = jointPDFAdapPartition(var_1, var_2, p, q, hm_HypoTest)
+        joint_set, hm_HypoTest, isUniform = jointPDFAdapPartition(var_1, var_2, p, q, hm_HypoTest)
         
         for j in range(p):
             for k in range(q):
@@ -147,10 +149,14 @@ def CMI_adaptive_pure_soft(X, Y, cond_set, hm_HypoTest):
                 index = np.array(index)
                 sub_cond_idx = get_indexes(C2[k], var_2[index])
                 sub_cond_idx = np.array(sub_cond_idx)
-                
-                results = MI_adaptive_soft(X[sub_cond_idx, :], Y[sub_cond_idx, :], hm_HypoTest, m, n)
-                temp_mi = results[0]
-                hm_HypoTest = results[2]
+                sub_cond_idx = sub_cond_idx.astype(int)
+                p_cond = len(sub_cond_idx) / hm_sample
+                if len(sub_cond_idx) == 0:
+                    temp_mi = 0
+                else:
+                    results = MI_adaptive_soft(X[sub_cond_idx], Y[sub_cond_idx], hm_HypoTest)
+                    temp_mi = results[0]
+                    hm_HypoTest = results[2]
                 if temp_mi == np.inf:
                     temp_mi = 0
                 else:

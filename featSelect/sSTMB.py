@@ -32,6 +32,7 @@ def sSTMB(train_data,train_labels,test_data,test_labels,Dtrain_data,Dtrain_label
     feature_indices = tian_sSTMB_new(Dtrain_data[:,permutation],Dtrain_labels).astype(int)
     selected_feats[i] = permutation[feature_indices]
   best_accuracy = 0
+  best_features = np.array([]).astype(int)
   for i in range(1,2**NUM_PERMUTATIONS):
     combination = [int(x) for x in list('{0:0b}'.format(i).zfill(NUM_PERMUTATIONS))]
     features = np.array([])
@@ -175,16 +176,16 @@ def analyze_sSTMB(fold,train_data,train_labels,test_data,test_labels,Dtrain_data
 
 def get_score(train_data,train_labels,test_data,test_labels, problem_type):
   if (problem_type=="classification"):
-    predictor = KNeighborsClassifier(n_neighbors=2)
+    predictor = KNeighborsClassifier(n_neighbors=5)
   else:
-    predictor = KNeighborsRegressor(n_neighbors=2)
+    predictor = KNeighborsRegressor(n_neighbors=5)
   predictor.fit(train_data,train_labels[:,0])
   predicted_labels = predictor.predict(test_data)
 
   if (problem_type=="classification"):
     score = accuracy_score(test_labels,predicted_labels)
   else:
-    score = 1/(mean_squared_error(test_labels,predicted_labels))
+    score = 1/(mean_squared_error(test_labels,predicted_labels) + 1e-10)
   return score
 
 

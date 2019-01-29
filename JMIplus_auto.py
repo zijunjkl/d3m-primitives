@@ -35,7 +35,7 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class JMIplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive which selects the most relevant features based on the joint mutual inforamtion between features and the target. Optimal number of selected features is decided via a brute force search and there is no hyper-parameter to tune.
+    A primitive that performs supervised feature selection to reduce input feature dimension. Input to this primitive should be a matrix of tabular numerical data, consisting of columns of features, and an array of labels. Output will be a reduced data matrix with metadata updated.
     """
     
     metadata = metadata_base.PrimitiveMetadata({
@@ -43,7 +43,7 @@ class JMIplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyper
         'version': '2.1.5',
         'name': 'JMIplus_auto feature selector',
         'keywords': ['Joint Mutual Information','Feature Selection'],
-        'description': 'This algorithm is selecting the most relevant features based on the joint mutual inforamtion between features and the target. Number of features to be selected is decided in an empirical way and there is no hyper-parameter to tune',
+        'description': 'This algorithm is selecting the most relevant features based on the joint mutual inforamtion between features and the target.',
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
@@ -108,6 +108,8 @@ class JMIplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyper
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
                 self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])
+            elif 'http://schema.org/Text' in semantic_types:
+                pass #replaces with zeros
             else:
                 temp = list(inputs.iloc[:, column_index].values)
                 for i in np.arange(len(temp)):

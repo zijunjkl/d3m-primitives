@@ -45,11 +45,11 @@ def jointPDFAdapPartition(X,Y,num_state_x, num_state_y, hm_HypoTest = 0):
             combined = combine_joint_dist_table(joint_dist, X, Y, part_X, part_Y, hm_HypoTest)
             joint_dist, hm_HypoTest = combined[0],combined[1]
     
-    results = []
-    results.append(joint_dist)
-    results.append(hm_HypoTest)
-    results.append(isUniform)
-    return results
+    #results = []
+    #results.append(joint_dist)
+    #results.append(hm_HypoTest)
+    #results.append(isUniform)
+    return joint_dist, hm_HypoTest, isUniform
 
 def recurrAdapPartition(part_X, part_Y, X, Y, m, n, hm_HypoTest, hm_recur, sig_level= 0.15):
     
@@ -84,7 +84,7 @@ def recurrAdapPartition(part_X, part_Y, X, Y, m, n, hm_HypoTest, hm_recur, sig_l
     p_val = getPvalue_Chisquare(X, Y, hm_x, hm_y)
     
     if p_val > sig_level:
-        hm_HypoTest = hm_HypoTest + 1
+        #hm_HypoTest = hm_HypoTest + 1
         results = []
         results.append(part_X)
         results.append(part_Y)
@@ -173,7 +173,10 @@ def recurrAdapPartition(part_X, part_Y, X, Y, m, n, hm_HypoTest, hm_recur, sig_l
                 results.append(hm_recur)
                 return results
             
-            bins = np.digitize(X, [1, sx, m+1])
+            temp = [1, sx, m+1]
+            temp.sort()
+            temp = np.asarray(temp)
+            bins = np.digitize(X, temp)
             index_1 = get_indexes(1, bins)
             index_2 = get_indexes(2, bins)
             

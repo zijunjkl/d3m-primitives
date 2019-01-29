@@ -37,20 +37,20 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive which does naive bayes classification. Bayesian Inference is applied.
+    A primitive which does naive bayes classification. During training, input to this primitive should be a matrix of tabular numercal data, and an array of labels. During testing, input is data matrix of numerical features only and output will be the predicted labels with metadata generated.
     """
     
     metadata = metadata_base.PrimitiveMetadata({
         'id': 'd63942d1-7a0f-47e9-8fcc-5f1e58dffa9b',
         'version': '2.1.5',
         'name': 'Naive Bayes Classifier',
-        'keywords': ['Naive Bayes','Bayesian Inference','Classification'],
+        'keywords': ['Naive Bayes','Classification'],
         'description': 'This algorithm is an implementation of Naive Bayes classification with Bayesian Inference',
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
             'uris': [
-                'https://github.com/zijun-rpi/d3m-primitives/blob/master/NaiveBayes.py',
+                'https://github.com/zijun-rpi/d3m-primitives/blob/master/NaiveBayes_BayesianInf.py',
                 'https://github.com/zijun-rpi/d3m-primitives.git'
                 ]
         },
@@ -121,6 +121,8 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
                 self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])  
+            elif 'http://schema.org/Text' in semantic_types:
+                pass
             else:
                 temp = list(inputs.iloc[:, column_index].values)
                 for i in np.arange(len(temp)):
@@ -176,6 +178,8 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
                     LE = preprocessing.LabelEncoder()
                     LE = LE.fit(inputs.iloc[:, column_index])
                     X_test[:, column_index] = LE.transform(inputs.iloc[:, column_index])
+                elif 'http://schema.org/Text' in semantic_types:
+                    pass
                 else:
                     temp = list(inputs.iloc[:, column_index].values)
                     for i in np.arange(len(temp)):
