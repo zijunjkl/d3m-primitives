@@ -68,10 +68,7 @@ class JMIplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
         'algorithm_types': [
             metadata_base.PrimitiveAlgorithmType.MINIMUM_REDUNDANCY_FEATURE_SELECTION
         ],
-        'primitive_family': metadata_base.PrimitiveFamily.FEATURE_SELECTION,
-        'preconditions': [
-            "NO_CATEGORICAL_VALUES"
-        ]
+        'primitive_family': metadata_base.PrimitiveFamily.FEATURE_SELECTION
     })
 
 
@@ -82,14 +79,9 @@ class JMIplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
         self._training_inputs = None
         self._training_outputs = None
         self._fitted = False
+        self._LEoutput = preprocessing.LabelEncoder()
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
-        # set training labels
-        [m,n] = inputs.shape
-        self._training_outputs = np.zeros((m,))
-        temp = list(outputs.iloc[:,0].values)
-        for i in np.arange(len(temp)):
-            self._training_outputs[i] = float(temp[i])
         
         # set problem type
         metadata = outputs.metadata
@@ -97,6 +89,9 @@ class JMIplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparam
         semantic_types = column_metadata.get('semantic_types', [])
         if 'https://metadata.datadrivendiscovery.org/types/CategoricalData' in semantic_types:
             self._problem_type = 'classification'
+            # set training labels
+            self._LEoutput.fit(outputs)
+            self._training_outputs = self._LEoutput.transform(outputs)
         else:
             self._problem_type = 'regression'
             

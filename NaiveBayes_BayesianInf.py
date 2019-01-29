@@ -20,6 +20,7 @@ from d3m.primitive_interfaces.base import CallResult
 from rpi_d3m_primitives.structuredClassifier.structured_Classify_model import Model
 from rpi_d3m_primitives.featSelect.RelationSet import RelationSet
 import rpi_d3m_primitives
+import time
 
 
 Inputs = container.DataFrame
@@ -76,6 +77,8 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
         self._fitted = False
         self._target_columns_metadata: List[Dict] = None
         self._clf = Model('nb', bayesInf=1, PointInf=0)
+        self._LEoutput = preprocessing.LabelEncoder()
+        
     
     def _store_target_columns_metadata(self, outputs: Outputs) -> None:
         outputs_length = outputs.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
@@ -98,15 +101,18 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
         
 
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
-        # set training labels
-        [m,n] = inputs.shape
-        self._training_outputs = np.zeros((m,))
-        temp = list(outputs.iloc[:,0].values)
-        for i in np.arange(len(temp)):
-            self._training_outputs[i] = float(temp[i])
-        
+
         # Update semantic types and prepare it for predicted targets
         self._store_target_columns_metadata(outputs)
+        
+        
+        # set training labels
+        metadata = outputs.metadata
+        column_metadata = metadata.query((metadata_base.ALL_ELEMENTS, 0))
+        semantic_types = column_metadata.get('semantic_types', [])
+        if 'https://metadata.datadrivendiscovery.org/types/CategoricalData' in semantic_types:
+            self._LEoutput.fit(outputs)
+            self._training_outputs = self._LEoutput.transform(outputs)
         
         # convert categorical values to numerical values in training data
         metadata = inputs.metadata
@@ -151,7 +157,6 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
         bins = discTrainset.NUM_STATES
         stateNo = np.append(bins, len(np.unique(Y_train)))
         self._clf.fit(X_train, Y_train, stateNo)
-        
         self._fitted = True
 
         return CallResult(None)
@@ -198,7 +203,8 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
             output = self._clf.predict(X_test)
             if min(self._training_outputs) == 1:
                 output = output + 1
-            #output = [int(item) for item in output]
+            # label decode
+            output = self._LEoutput.inverse_transform(output)
             
             # update metadata
             output = container.DataFrame(output, generate_metadata=False, source=self)

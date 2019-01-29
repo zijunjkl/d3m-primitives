@@ -16,10 +16,10 @@ from common_primitives import compute_scores
 import pandas as pd
 from sklearn.metrics import f1_score
 import time
-#from rpi_d3m_primitives.NaiveBayes_PointInf import NaiveBayes_PointInf as NB_P
+from rpi_d3m_primitives.NaiveBayes_PointInf import NaiveBayes_PointInf as NB_P
 from rpi_d3m_primitives.NaiveBayes_BayesianInf import NaiveBayes_BayesianInf as NB_B
-#from rpi_d3m_primitives.TreeAugmentNB_PointInf import TreeAugmentNB_PointInf as TAN_P
-#from rpi_d3m_primitives.TreeAugmentNB_BayesianInf import TreeAugmentNB_BayesianInf as TAN_B
+from rpi_d3m_primitives.TreeAugmentNB_PointInf import TreeAugmentNB_PointInf as TAN_P
+from rpi_d3m_primitives.TreeAugmentNB_BayesianInf import TreeAugmentNB_BayesianInf as TAN_B
 #import d3m.primitives.feature_selection.simultaneous_markov_blanket as STMB
 #import d3m.primitives.classification.naive_bayes as NB
 
@@ -29,7 +29,7 @@ dataset_name = '185_baseball'
 #dataset_name = '27_wordLevels' 
 #dataset_name = 'uu4_SPECT'  #IPCMB takes time
 #dataset_name = '1491_one_hundred_plants_margin'
-#dataset_name = '313_spectrometer'  # compute score has issue
+#ataset_name = '313_spectrometer'  # compute score has issue
 #dataset_name = '57_hypothyroid'
 #dataset_name = '4550_MiceProtein' 
 
@@ -79,13 +79,13 @@ trainL = encoder_primitive.produce(inputs=trainL).value
 
 ########################################################################################
 print ('Classification phase: Naive Bayes classifier')
-t = time.time()
-hyperparams_class = NB_B.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-classifier = NB_B(hyperparams=hyperparams_class.defaults())
+#t = time.time()
+hyperparams_class = TAN_P.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+classifier = TAN_P(hyperparams=hyperparams_class.defaults())
 
 classifier.set_training_data(inputs=trainD, outputs=trainL)
 classifier.fit()
-elapsed = time.time() - t
+#elapsed = time.time() - t
 ########################################################################################
         
 
@@ -122,52 +122,54 @@ TargetName = column_metadata.get('name',[])
 
 
 print('\nClassifier Prediction')
-t = time.time()
+#t = time.time()
 predictedTargets = classifier.produce(inputs=testD)
 predictedTargets = predictedTargets.value
-elapsed = elapsed + time.time() - t
+#elapsed = elapsed + time.time() - t
+print('\ncomputing time')
+print(classifier._time)
 
-print('\nLabel Decoder')
-decoder_hyperparams_class = UnseenLabelDecoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-decoder_primitive = UnseenLabelDecoderPrimitive(hyperparams=decoder_hyperparams_class.defaults().replace({'encoder': encoder_primitive}))
-predictedTargets = decoder_primitive.produce(inputs=predictedTargets).value
-
-print('\nConstruct Predictions')
-hyperparams_class = construct_predictions.ConstructPredictionsPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-construct_primitive = construct_predictions.ConstructPredictionsPrimitive(hyperparams=hyperparams_class.defaults())
-call_metadata = construct_primitive.produce(inputs=predictedTargets, reference=dataframe)
-dataframe = call_metadata.value
-
-print('\ncompute scores')
-path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/dataset_TEST/datasetDoc.json')
-#path = '/Users/zijun/Dropbox/38_sick/SCORE/dataset_TEST/datasetDoc.json'
-dataset = container.Dataset.load('file://{uri}'.format(uri=path))
-
-#target_idx = dataset.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
-dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/Target')
-dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/TrueTarget')
-
-hyperparams_class = compute_scores.ComputeScoresPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-metrics_class = hyperparams_class.configuration['metrics'].elements
-primitive = compute_scores.ComputeScoresPrimitive(hyperparams=hyperparams_class.defaults().replace({
-            'metrics': [metrics_class({
-                'metric': 'F1_MACRO',
-                'pos_label': None,
-                'k': None,
-            })],
-        }))
-scores = primitive.produce(inputs=dataframe, score_dataset=dataset).value
-
-#groundtruth_path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/targets.csv')
-#GT_label = pd.read_csv(groundtruth_path)
-#GT_label = container.ndarray(GT_label[TargetName])
-#y_pred = predictedTargets.iloc[:,0]
-#y_pred = [int(i) for i in y_pred]
-#scores = f1_score(GT_label, y_pred, average='macro')
-
-print(scores)
-print('\n Computing time')
-print(elapsed)
+#print('\nLabel Decoder')
+#decoder_hyperparams_class = UnseenLabelDecoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+#decoder_primitive = UnseenLabelDecoderPrimitive(hyperparams=decoder_hyperparams_class.defaults().replace({'encoder': encoder_primitive}))
+#predictedTargets = decoder_primitive.produce(inputs=predictedTargets).value
+#
+#print('\nConstruct Predictions')
+#hyperparams_class = construct_predictions.ConstructPredictionsPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+#construct_primitive = construct_predictions.ConstructPredictionsPrimitive(hyperparams=hyperparams_class.defaults())
+#call_metadata = construct_primitive.produce(inputs=predictedTargets, reference=dataframe)
+#dataframe = call_metadata.value
+#
+#print('\ncompute scores')
+#path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/dataset_TEST/datasetDoc.json')
+##path = '/Users/zijun/Dropbox/38_sick/SCORE/dataset_TEST/datasetDoc.json'
+#dataset = container.Dataset.load('file://{uri}'.format(uri=path))
+#
+##target_idx = dataset.metadata.query((metadata_base.ALL_ELEMENTS,))['dimension']['length']
+#dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/Target')
+#dataset.metadata = dataset.metadata.add_semantic_type(('learningData', metadata_base.ALL_ELEMENTS, target_idx), 'https://metadata.datadrivendiscovery.org/types/TrueTarget')
+#
+#hyperparams_class = compute_scores.ComputeScoresPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+#metrics_class = hyperparams_class.configuration['metrics'].elements
+#primitive = compute_scores.ComputeScoresPrimitive(hyperparams=hyperparams_class.defaults().replace({
+#            'metrics': [metrics_class({
+#                'metric': 'F1_MACRO',
+#                'pos_label': None,
+#                'k': None,
+#            })],
+#        }))
+#scores = primitive.produce(inputs=dataframe, score_dataset=dataset).value
+#
+##groundtruth_path = os.path.join('/Users/zijun/Dropbox/', dataset_name, 'SCORE/targets.csv')
+##GT_label = pd.read_csv(groundtruth_path)
+##GT_label = container.ndarray(GT_label[TargetName])
+##y_pred = predictedTargets.iloc[:,0]
+##y_pred = [int(i) for i in y_pred]
+##scores = f1_score(GT_label, y_pred, average='macro')
+#
+#print(scores)
+#print('\n Computing time')
+#print(elapsed)
 
 #print('\nSave file')
 #os.mkdir('/output/predictions/e7239570-bb9d-464b-aa5b-a0f7be958dc0')

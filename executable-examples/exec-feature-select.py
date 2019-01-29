@@ -23,13 +23,13 @@ from rpi_d3m_primitives.NaiveBayes_BayesianInf import NaiveBayes_BayesianInf as 
 
 # Classification
 #dataset_name = '38_sick'
-dataset_name = '185_baseball'
+#dataset_name = '185_baseball'
 #dataset_name = '27_wordLevels' 
 #dataset_name = 'uu4_SPECT'  #IPCMB takes time
 #dataset_name = '1491_one_hundred_plants_margin'
 #dataset_name = '313_spectrometer' 
 #dataset_name = '57_hypothyroid'
-#dataset_name = '4550_MiceProtein' 
+dataset_name = '4550_MiceProtein' 
 
 # Regerssion
 #dataset_name = '26_radon_seed'
@@ -64,52 +64,37 @@ primitive = ExtractColumnsBySemanticTypesPrimitive(hyperparams=hyperparams_class
 call_metadata = primitive.produce(inputs=dataframe)
 trainL = call_metadata.value
 
-print('\nLabel Encoder')
-# step 5: label encoder for target labels
-encoder_hyperparams_class = UnseenLabelEncoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-encoder_primitive = UnseenLabelEncoderPrimitive(hyperparams=encoder_hyperparams_class.defaults())
-encoder_primitive.set_training_data(inputs=trainL)
-encoder_primitive.fit()
-trainL = encoder_primitive.produce(inputs=trainL).value
-
-
 ########################################################################################
 #print('\nFeature Selection: JMI')
 ##step 6 feature selection
-#t = time.time()
 #hyperparams_class = JMIplus_auto.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
 #FSmodel = JMIplus_auto(hyperparams=hyperparams_class.defaults())
 #FSmodel.set_training_data(inputs=trainD, outputs=trainL)        
 #FSmodel.fit()
-#elapsed = time.time() - t
 #print('\nSelected Feature Index')
 #print(FSmodel._index)
 #print('\n')
 
-print('\nFeature Selection: S2TMB')
+#print('\nFeature Selection: S2TMB')
+##step 6 feature selection
+#hyperparams_class = S2TMBplus.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+#FSmodel = S2TMBplus(hyperparams=hyperparams_class.defaults())
+#FSmodel.set_training_data(inputs=trainD, outputs=trainL)        
+#FSmodel.fit()
+#print('\nSelected Feature Index')
+#print(FSmodel._index)
+#print('\n')
+#
+
+print('\nFeature Selection: STMB')
 #step 6 feature selection
-t = time.time()
-hyperparams_class = S2TMBplus.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-FSmodel = S2TMBplus(hyperparams=hyperparams_class.defaults())
+hyperparams_class = STMBplus_auto.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
+FSmodel = STMBplus_auto(hyperparams=hyperparams_class.defaults())
 FSmodel.set_training_data(inputs=trainD, outputs=trainL)        
 FSmodel.fit()
-elapsed = time.time() - t
 print('\nSelected Feature Index')
 print(FSmodel._index)
 print('\n')
-#
-
-#print('\nFeature Selection: STMB')
-##step 6 feature selection
-#t = time.time()
-#hyperparams_class = STMBplus_auto.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-#FSmodel = STMBplus_auto(hyperparams=hyperparams_class.defaults())
-#FSmodel.set_training_data(inputs=trainD, outputs=trainL)        
-#FSmodel.fit()
-#elapsed = time.time() - t
-#print('\nSelected Feature Index')
-#print(FSmodel._index)
-#print('\n')
 
 trainD = FSmodel.produce(inputs=trainD) 
 trainD = trainD.value
@@ -157,12 +142,7 @@ TargetName = column_metadata.get('name',[])
 print('\nClassifier Prediction')
 predictedTargets = classifier.produce(inputs=testD)
 predictedTargets = predictedTargets.value
-#predictedTargets.metadata = comUtils.select_columns_metadata(testL.metadata, columns=[0])
 
-print('\nLabel Decoder')
-decoder_hyperparams_class = UnseenLabelDecoderPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
-decoder_primitive = UnseenLabelDecoderPrimitive(hyperparams=decoder_hyperparams_class.defaults().replace({'encoder': encoder_primitive}))
-predictedTargets = decoder_primitive.produce(inputs=predictedTargets).value
 
 print('\nConstruct Predictions')
 hyperparams_class = construct_predictions.ConstructPredictionsPrimitive.metadata.query()['primitive_code']['class_type_arguments']['Hyperparams']
@@ -198,8 +178,7 @@ scores = primitive.produce(inputs=dataframe, score_dataset=dataset).value
 
 print('\nScore')
 print(scores)
-print('\n Computing time')
-print(elapsed)
+
 
 
 
