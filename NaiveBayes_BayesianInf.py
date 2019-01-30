@@ -38,7 +38,7 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive which does naive bayes classification. During training, input to this primitive should be a matrix of tabular numercal data, and an array of labels. During testing, input is data matrix of numerical features only and output will be the predicted labels with metadata generated.
+    A primitive which does naive bayes classification. During training, input to this primitive should be a matrix of tabular numercal/categorical data, and an array of labels. During testing, input is data matrix of numerical features only and output will be the predicted labels with metadata generated.
     """
     
     metadata = metadata_base.PrimitiveMetadata({

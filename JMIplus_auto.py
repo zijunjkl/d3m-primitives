@@ -35,7 +35,7 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class JMIplus_auto(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive that performs supervised feature selection to reduce input feature dimension. Input to this primitive should be a matrix of tabular numerical data, consisting of columns of features, and an array of labels. Output will be a reduced data matrix with metadata updated.
+    A primitive that performs supervised feature selection to reduce input feature dimension. Input to this primitive should be a matrix of tabular numerical/categorical data, consisting of columns of features, and an array of labels. Output will be a reduced data matrix with metadata updated.
     """
     
     metadata = metadata_base.PrimitiveMetadata({

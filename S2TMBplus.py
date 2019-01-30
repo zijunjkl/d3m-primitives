@@ -35,7 +35,7 @@ class Hyperparams(hyperparams.Hyperparams):
 
 class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
     """
-    A primitive that performs supervised structured feature selection to reduce input feature dimension. Input to this primitive should be a matrix of tabular numerical data, consisting of columns of features, and an array of labels. Output will be a reduced data matrix with metadata updated.
+    A primitive that performs supervised structured feature selection to reduce input feature dimension. Input to this primitive should be a matrix of tabular numerical/categorical data, consisting of columns of features, and an array of labels. Output will be a reduced data matrix with metadata updated.
     """
     
     metadata = metadata_base.PrimitiveMetadata({
@@ -43,7 +43,7 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
         'version': '2.1.5',
         'name': 'S2TMBplus feature selector',
         'keywords': ['Feature Selection'],
-        'description': 'This primitive will select a subset of input features and thus reduce input feature dimension.', 
+        'description': 'This primitive is a structured feature selection based on a scoring function.', 
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
