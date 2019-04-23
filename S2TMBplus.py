@@ -17,7 +17,7 @@ from d3m.primitive_interfaces.base import CallResult
 import rpi_d3m_primitives
 from rpi_d3m_primitives.featSelect.Feature_Selector_model import S2TMB
 from rpi_d3m_primitives.featSelect.RelationSet import RelationSet
-
+from sklearn.impute import SimpleImputer
 
 
 Inputs = container.DataFrame
@@ -30,7 +30,13 @@ class Params(params.Params):
 
 
 class Hyperparams(hyperparams.Hyperparams):
-    pass
+    nbins = hyperparams.UniformInt(
+            lower=2,
+            upper=21,
+            default=10,
+            description = 'The number of bins for discretization.',
+            semantic_types = ['https://metadata.datadrivendiscovery.org/types/TuningParameter']
+            )
 
 
 class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperparams]):
@@ -39,11 +45,11 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
     """
     
     metadata = metadata_base.PrimitiveMetadata({
-        'id': '9d1a2e58-5f97-386c-babd-5a9b4e9b6d6c',
-        'version': '2.1.5',
+        'id': '215f554e-15f4-4174-9743-03cddad91dc4',
+        'version': rpi_d3m_primitives.__coreversion__,
         'name': 'S2TMBplus feature selector',
         'keywords': ['Feature Selection'],
-        'description': 'This primitive is a structured feature selection based on a scoring function.', 
+        'description': 'This primitive is a structured feature selection function based on a scoring function.', 
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
@@ -74,8 +80,11 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
         self._training_inputs = None
         self._training_outputs = None
         self._fitted = False
-        self._LEoutput = preprocessing.LabelEncoder()        
-
+        self._LEoutput = preprocessing.LabelEncoder()    
+        self._Imputer = SimpleImputer(missing_values=np.nan, strategy='mean')#self.hyperparams['Imputer_Strategy']) # imputer
+        self._nbins = self.hyperparams['nbins']
+        self._Kbins = preprocessing.KBinsDiscretizer(n_bins=self._nbins, encode='ordinal', strategy='uniform')#self.hyperparams['Discretizer_Strategy']) #KbinsDiscretizer
+ 
     ## TO Do
     # select columns via semantic types
     # remove preprocessing 
@@ -97,6 +106,7 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
         metadata = inputs.metadata
         [m,n] = inputs.shape
         self._training_inputs = np.zeros((m,n))
+        self._cate_flag = np.zeros((n,))
         for column_index in metadata.get_elements((metadata_base.ALL_ELEMENTS,)):
             if column_index is metadata_base.ALL_ELEMENTS: 
                 continue
@@ -106,6 +116,7 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
                 self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])  
+                self._cate_flag[column_index] = 1
             elif 'http://schema.org/Text' in semantic_types:
                 pass
             else:
@@ -115,7 +126,11 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
                         self._training_inputs[i,column_index] = float(temp[i])
                     else:
                         ## To do: float nan
-                        self._training_inputs[i,column_index] = 'nan'
+                        self._training_inputs[i,column_index] = float('nan')
+                if not np.count_nonzero(np.isnan(self._training_inputs[:, column_index])) == 0:  # if there is missing values
+                    if np.count_nonzero(np.isnan(self._training_inputs[:,column_index])) == m:   # all missing
+                        self._training_inputs[:,column_index] = np.zeros(m,) # replace with all zeros
+                        
         self._fitted = False
 
 
@@ -126,11 +141,26 @@ class S2TMBplus(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Params, Hyperpar
         if self._training_inputs.any() == None or self._training_outputs.any() == None: 
             raise ValueError('Missing training data, or missing values exist.')
 
+        ## impute missing values
+        self._Imputer.fit(self._training_inputs)
+        self._training_inputs = self._Imputer.transform(self._training_inputs)
+        
+#        [m,n] = self._training_inputs.shape
+#        for column_index in range(n):
+#            if len(np.unique(self._training_inputs[:,column_index])) == 1:
+#                self._cate_flag[column_index] = 1
+                
+        ## discretize non-categorical values
+        disc_training_inputs = self._training_inputs
+        if not len(np.where(self._cate_flag == 0)[0]) == 0:
+            self._Kbins.fit(self._training_inputs[:, np.where(self._cate_flag == 0)[0]]) #find non-categorical values
+            temp = self._Kbins.transform(self._training_inputs[:, np.where(self._cate_flag == 0)[0]])
+            disc_training_inputs[:, np.where(self._cate_flag == 0)[0]] = temp
+        #start from zero
+        
         Trainset = RelationSet(self._training_inputs, self._training_outputs.reshape(-1, 1))
-        Trainset.impute()
-        discTrainset = RelationSet(self._training_inputs, self._training_outputs.reshape(-1, 1))
-        discTrainset.impute()
-        discTrainset.discretize()
+        discTrainset = RelationSet(disc_training_inputs, self._training_outputs.reshape(-1, 1))
+        
         validSet, smallTrainSet = Trainset.split(self._training_inputs.shape[0] // 4)
         smallDiscTrainSet = discTrainset.split(self._training_inputs.shape[0] // 4)[1]
         model = S2TMB(smallTrainSet, smallDiscTrainSet,

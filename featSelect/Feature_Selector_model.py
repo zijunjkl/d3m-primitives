@@ -1,5 +1,6 @@
 # Algorithms
 from rpi_d3m_primitives.featSelect.tian_STMB_new import tian_STMB_new
+from rpi_d3m_primitives.featSelect.STMB_G_test import STMB_G_test
 from rpi_d3m_primitives.featSelect.sSTMB import sSTMBplus
 from rpi_d3m_primitives.featSelect.Large_Scale_STMB import Large_Scale_STMB
 from rpi_d3m_primitives.featSelect.JointMutualInformation import jmi
@@ -7,6 +8,7 @@ from rpi_d3m_primitives.featSelect.tian_IPCMB import tian_IPCMB
 from rpi_d3m_primitives.featSelect.Large_Scale_IPCMB import Large_Scale_IPCMB
 from rpi_d3m_primitives.featSelect.Keyi_STMB_Adaptive_soft import Keyi_STMB_Adaptive_soft
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
+from sklearn.ensemble import AdaBoostClassifier
 # Classes
 from rpi_d3m_primitives.featSelect.Predictor import Classifier,Regressor
 # Packages
@@ -27,7 +29,8 @@ class FeatureSelector:
 	def set_predictor(self,predictor_base):
 		if (self.problem_type == "classification"):
 			if (self.predictor_base == None):
-				self.predictor_base = KNeighborsClassifier(n_neighbors=3)
+#				self.predictor_base = AdaBoostClassifier(n_estimators=30)
+				self.predictor_base = KNeighborsClassifier(n_neighbors=5)
 			self.predictor = Classifier(self.predictor_base,self.test_set,self.train_set)
 		elif (self.problem_type == "regression"):
 			if (self.predictor_base == None):
@@ -63,32 +66,38 @@ class MBFeatureSelector(FeatureSelector):
 	def get_threshold(self,max_loop):
 		pass
 
-	def get_threshold_bisection(self,max_loop):
-		"""	Use bisection to find the optimal indepence threshold (used for STMB,IPCMB)
-		"""
-		"'-score' is a stand in for MSE when dealing with regression, and accuracy for classification"
-		# Constants
-		MAX_THRESHOLD = 1
-		MIN_THRESHOLD = 0
-		# Caches
-		feats_to_accuracy = dict()
-		# Initial optimal score will be computed with all features
-		optimal_thres = 0
-		optimal_feats = np.arange(0,self.train_set.data.shape[1])
-		optimal_score = self.predictor.score(optimal_feats,feats_to_accuracy)
-		loop_count = 0
-		search_area = MAX_THRESHOLD-MIN_THRESHOLD
-		left_thres = search_area/4+MIN_THRESHOLD
-		right_thres = 3*search_area/4+MIN_THRESHOLD
+	def bisect(self,min_thres,max_thres,optimal_thres,optimal_feats,feats_to_accuracy,optimal_score):
 		# Loop
+		loop_count = 0
+		max_loop = 3
+		search_area = max_thres-min_thres
+		left_thres = search_area/4+min_thres
+		right_thres = 3*search_area/4+min_thres
 		while (loop_count < max_loop):
 			loop_count += 1
 			# Choose
+#			print('\nleft thres')
+#			print(left_thres)
+#			print('\nright thres')
+#			print(right_thres)
 			left_feats = self.select_features(left_thres)
 			right_feats = self.select_features(right_thres)
-			chosen_feats,chosen_score = self.predictor.choose(left_feats,right_feats,optimal_feats,feats_to_accuracy)
+			chosen_feats,chosen_score = \
+				self.predictor.choose(left_feats,right_feats,optimal_feats,feats_to_accuracy)
+#			print('\nchosen score')
+#			print(chosen_score)
+#			print('\noptimal score')
+#			print(optimal_score)
 			right_chosen = (np.array_equal(right_feats,chosen_feats))
-			if (not (np.array_equal(chosen_feats, optimal_feats))):
+			if chosen_score > optimal_score:
+#			if (not (np.array_equal(chosen_feats, optimal_feats))):
+				optimal_score = chosen_score
+				optimal_feats = chosen_feats
+				if (right_chosen):
+					optimal_thres = right_thres
+				else:
+					optimal_thres = left_thres
+			elif (chosen_score == optimal_score and len(chosen_feats) < len(optimal_feats)):
 				optimal_score = chosen_score
 				optimal_feats = chosen_feats
 				if (right_chosen):
@@ -97,21 +106,21 @@ class MBFeatureSelector(FeatureSelector):
 					optimal_thres = left_thres
 				# Divide
 				#delta = (right_thres - left_thres) / 2
-				delta = search_area/(2**(2+loop_count))
-				if (right_chosen):
-					left_thres = right_thres - delta
-					right_thres = min(delta + right_thres, MAX_THRESHOLD)
-				else:
-					right_thres = left_thres + delta
-					left_thres = max(left_thres - delta, MIN_THRESHOLD)
-			elif (list(left_feats) == [] and list(right_feats) == []): #search ares is too large
-				loop_count -= 1
-				search_area = search_area/2
-				left_thres = search_area / 4 + MIN_THRESHOLD
-				right_thres = 3 * search_area / 4 + MIN_THRESHOLD
+			delta = search_area/(2**(2+loop_count))
+			if (right_chosen):
+				left_thres = right_thres - delta
+				right_thres = min(delta + right_thres, max_thres)
 			else:
-				# The increase in accuracy is insufficient to continue
-				break
+				right_thres = left_thres + delta
+				left_thres = max(left_thres - delta, min_thres)
+#			elif (list(left_feats) == [] and list(right_feats) == []): #search ares is too large
+#				loop_count -= 1
+#				search_area = search_area/2
+#				left_thres = search_area/4 + min_thres
+#				right_thres = 3*search_area/4 + min_thres
+#			else:
+#				# The increase in accuracy is insufficient to continue
+#				break
 			# Divide
 			#delta = (right_thres-left_thres)/2
 			#if (right_chosen):
@@ -120,6 +129,33 @@ class MBFeatureSelector(FeatureSelector):
 			#else:
 			#	left_thres = max(left_thres-delta,0)
 			#	right_thres -= delta
+		return optimal_thres,optimal_feats,optimal_score
+
+	def get_threshold_bisection(self,max_loop):
+		"""	Use bisection to find the optimal indepence threshold (used for STMB,IPCMB)
+		"""
+		"'-score' is a stand in for MSE when dealing with regression, and accuracy for classification"
+		full_test_set = self.test_set
+		num_samples = self.test_set.data.shape[0]
+		# Constants
+		MAX_THRESHOLD = 1
+		MIN_THRESHOLD = 0
+		Interv_THRESHOLD = 0.05
+		num_Interv = (MAX_THRESHOLD-MIN_THRESHOLD)/Interv_THRESHOLD
+		# Caches
+		feats_to_accuracy = dict()
+		# Initial optimal score will be computed with all features
+		optimal_thres = 0
+		optimal_feats = np.arange(0,self.train_set.data.shape[1])
+		optimal_score = self.predictor.score(optimal_feats,feats_to_accuracy)
+		for i in range(3):
+			fold_start = int(i*num_samples/3)
+			fold_end = int((i+1)*num_samples/3)
+			self.predictor.test_set = full_test_set.resample(fold_start,fold_end)
+			for min_thres in np.linspace(MIN_THRESHOLD,MAX_THRESHOLD,num_Interv+1):
+				optimal_thres, optimal_feats, optimal_score = self.bisect(min_thres, min_thres+Interv_THRESHOLD, optimal_thres,optimal_feats,feats_to_accuracy,optimal_score)
+		optimal_feats = self.select_features(optimal_thres)
+		self.predictor.test_set = full_test_set
 		return optimal_thres,optimal_feats
 
 class IPCMB(MBFeatureSelector):
@@ -144,6 +180,15 @@ class STMB(MBFeatureSelector):
 
 	def get_threshold(self,max_loop):
 		return self.get_threshold_bisection(max_loop)
+
+class STMB_Gtest(MBFeatureSelector):
+	"Class that drives the algorithm for feature selection with STMB"
+	def select_features(self):
+		train_data = self.train_set.data
+		train_labels = self.train_set.labels
+		selected_features = STMB_G_test(train_data, train_labels)[0]
+		return selected_features
+
 
 class ASTMB(MBFeatureSelector):
 	"Class that drives the algorithm for feature selection with aSTMB"

@@ -4,15 +4,15 @@ from rpi_d3m_primitives.structuredClassifier.learnCPD import learnCPDAllD
 from rpi_d3m_primitives.structuredClassifier.inference import posteriorInf
 from rpi_d3m_primitives.pyBN.learning.structure.naive.naive_bayes import naive_bayes
 from rpi_d3m_primitives.pyBN.learning.structure.naive.TAN import TAN
-#from rpi_d3m_primitives.pyBN.learning.structure.score.hill_climbing import hc as hill_climbing
-#from rpi_d3m_primitives.pyBN.learning.structure.score import tabu
+from rpi_d3m_primitives.pyBN.learning.structure.score.hill_climbing import hc as hill_climbing
+from rpi_d3m_primitives.pyBN.learning.structure.score.tabu import tabu as tabu
 #from rpi_d3m_primitives.pyBN.learning.structure.constraint.grow_shrink import gs as grow_shrink
 #from rpi_d3m_primitives.pyBN.learning.structure.hybrid.mmhc import mmhc
 import numpy as np
 
 class Model():
     
-    def __init__( self, modelName, bayesInf, PointInf, alpha = 1, N0 = 5):
+    def __init__( self, modelName, bayesInf, PointInf, alpha, N0):
         
         self.modelName = modelName
         self.bayesInf = bayesInf
@@ -20,7 +20,8 @@ class Model():
         self.N0 = N0
         self.alpha = alpha
         self.stateNo = []
-        self.parents = []
+        self.parents = []#for structure drawing
+        self.children = []#for structure drawing
         self.CPD = []
         self.score = []
 
@@ -33,18 +34,18 @@ class Model():
             bn = naive_bayes(trainMatrix, D-1)
         elif self.modelName == 'tan':
             bn = TAN(trainMatrix, D-1)
-        #elif self.modelName == 'hc':
-        #    bn = hill_climbing(trainMatrix)
-        #elif self.modelName == 'Tabu':
-        #    bn = tabu(trainMatrix)
-        #elif self.modelName == 'gs':
-        #    bn = grow_shrink(trainMatrix)
-        #elif self.modelName == 'mmhc':
-        #    bn = mmhc(trainMatrix)
-
-        for i in range(D):
-            self.parents.append(bn.parents(i))
+        elif self.modelName == 'hc':
+            bn = hill_climbing(trainMatrix)
+        elif self.modelName == 'Tabu':
+            bn = tabu(trainMatrix)
+#        elif self.modelName == 'gs':
+#            bn = grow_shrink(trainMatrix)
+#        elif self.modelName == 'mmhc':
+#            bn = mmhc(trainMatrix)
         
+        for i in range(D):#for structure drawing
+            self.parents.append(bn.parents(i))
+            self.children.append(bn.children(i))
     def learnParameters( self, train_data, train_labels, bayesInf, PointInf, debug= False):
         
         self.bayesInf = bayesInf

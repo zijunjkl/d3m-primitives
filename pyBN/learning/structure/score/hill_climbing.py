@@ -36,10 +36,12 @@ from rpi_d3m_primitives.pyBN.learning.parameter.mle import mle_estimator
 from rpi_d3m_primitives.pyBN.learning.parameter.bayes import bayes_estimator
 from rpi_d3m_primitives.pyBN.learning.structure.score.info_scores import info_score
 from rpi_d3m_primitives.pyBN.utils.independence_tests import mutual_information
+#from rpi_d3m_primitives_all.featSelect.mutualInformation import mi
+#from rpi_d3m_primitives.feaSelect.informationTheoreticFunctions import mi
 from rpi_d3m_primitives.pyBN.utils.graph import would_cause_cycle
 
 
-def hc(data, metric='AIC', max_iter=100, debug=False, restriction=None):
+def hc(data, metric='BIC', max_iter=100, debug=True, restriction=None):
 	"""
 	Greedy Hill Climbing search proceeds by choosing the move
 	which maximizes the increase in fitness of the
@@ -109,6 +111,9 @@ def hc(data, metric='AIC', max_iter=100, debug=False, restriction=None):
 	# maintain children and parents dict for fast lookups
 	c_dict = dict([(n,[]) for n in names])
 	p_dict = dict([(n,[]) for n in names])
+	for i in range(ncol-1):
+		p_dict[i].append(ncol-1)
+		c_dict[ncol-1].append(i)
 	
 	# COMPUTE INITIAL LIKELIHOOD SCORE	
 	value_dict = dict([(n, np.unique(data[:,i])) for i,n in enumerate(names)])
@@ -135,19 +140,26 @@ def hc(data, metric='AIC', max_iter=100, debug=False, restriction=None):
 		for u in bn.nodes():
 			for v in bn.nodes():
 				if v not in c_dict[u] and u!=v and not would_cause_cycle(c_dict, u, v):
+#					print(u)
+#					print(v)
 					# FOR MMHC ALGORITHM -> Edge Restrictions
 					if restriction is None or (u,v) in restriction:
 						# SCORE FOR 'V' -> gaining a parent
+#						print('p_dict{}is{}',v,p_dict[v])
 						old_cols = (v,) + tuple(p_dict[v]) # without 'u' as parent
+#						print('old_cols:{}',old_cols)
 						mi_old = mutual_information(data[:,old_cols])
+#						mi_old = mi(data[:,old_cols[0]],data[:,old_cols[1:]],0)
 						new_cols = old_cols + (u,) # with'u' as parent
+#						print('new_cols:{}',new_cols)
 						mi_new = mutual_information(data[:,new_cols])
+#						mi_new = mi(data[:,new_cols[0]],data[:,new_cols[1:]],0)
 						delta_score = nrow * (mi_old - mi_new)
 
 						if delta_score > max_delta:
-							#if debug:
-							#	print('Improved Arc Addition: ' , (u,v))
-							#	print('Delta Score: ' , delta_score)
+							if debug:
+								print('Improved Arc Addition: ' , (u,v))
+								print('Delta Score: ' , delta_score)
 							max_delta = delta_score
 							max_operation = 'Addition'
 							max_arc = (u,v)
@@ -159,14 +171,16 @@ def hc(data, metric='AIC', max_iter=100, debug=False, restriction=None):
 					# SCORE FOR 'V' -> losing a parent
 					old_cols = (v,) + tuple(p_dict[v]) # with 'u' as parent
 					mi_old = mutual_information(data[:,old_cols])
+#					mi_old = mi(data[:,old_cols[0]],data[:,old_cols[1:]],0)
 					new_cols = tuple([i for i in old_cols if i != u]) # without 'u' as parent
 					mi_new = mutual_information(data[:,new_cols])
+#					mi_new = mi(data[:,new_cols[0]],data[:,new_cols[1:]],0)
 					delta_score = nrow * (mi_old - mi_new)
 
 					if delta_score > max_delta:
-						#if debug:
-						#	print('Improved Arc Deletion: ' , (u,v))
-						#	print('Delta Score: ' , delta_score)
+						if debug:
+							print('Improved Arc Deletion: ' , (u,v))
+							print('Delta Score: ' , delta_score)
 						max_delta = delta_score
 						max_operation = 'Deletion'
 						max_arc = (u,v)
@@ -178,22 +192,26 @@ def hc(data, metric='AIC', max_iter=100, debug=False, restriction=None):
 					# SCORE FOR 'U' -> gaining 'v' as parent
 					old_cols = (u,) + tuple(p_dict[v]) # without 'v' as parent
 					mi_old = mutual_information(data[:,old_cols])
+#					mi(data[:,old_cols[0]],data[:,old_cols[1:]],0)
 					new_cols = old_cols + (v,) # with 'v' as parent
 					mi_new = mutual_information(data[:,new_cols])
+#					mi(data[:,new_cols[0]],data[:,new_cols[1:]],0)
 					delta1 = nrow * (mi_old - mi_new)
 					# SCORE FOR 'V' -> losing 'u' as parent
 					old_cols = (v,) + tuple(p_dict[v]) # with 'u' as parent
 					mi_old = mutual_information(data[:,old_cols])
+#					mi(data[:,old_cols[0]],data[:,old_cols[1:]],0)
 					new_cols = tuple([u for i in old_cols if i != u]) # without 'u' as parent
 					mi_new = mutual_information(data[:,new_cols])
+#					mi(data[:,new_cols[0]],data[:,new_cols[1:]],0)
 					delta2 = nrow * (mi_old - mi_new)
 					# COMBINED DELTA-SCORES
 					delta_score = delta1 + delta2
 
 					if delta_score > max_delta:
-						#if debug:
-						#	print('Improved Arc Reversal: ' , (u,v))
-						#	print('Delta Score: ' , delta_score)
+						if debug:
+							print('Improved Arc Reversal: ' , (u,v))
+							print('Delta Score: ' , delta_score)
 						max_delta = delta_score
 						max_operation = 'Reversal'
 						max_arc = (u,v)

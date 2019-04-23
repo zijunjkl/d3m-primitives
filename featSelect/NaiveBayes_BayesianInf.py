@@ -21,6 +21,7 @@ from rpi_d3m_primitives.structuredClassifier.structured_Classify_model import Mo
 from rpi_d3m_primitives.featSelect.RelationSet import RelationSet
 import rpi_d3m_primitives
 import time
+from sklearn.impute import SimpleImputer
 
 
 Inputs = container.DataFrame
@@ -46,7 +47,7 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
         'version': '2.1.5',
         'name': 'Naive Bayes Classifier',
         'keywords': ['Naive Bayes','Classification'],
-        'description': 'This algorithm is an implementation of Naive Bayes classification with Bayesian Inference',
+        'description': 'This algorithm is the Bayesian Inference with Naive Bayes classification',
         'source': {
             'name': rpi_d3m_primitives.__author__,
             'contact': 'mailto:cuiz3@rpi.edu',
@@ -74,10 +75,15 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
         self._index = None
         self._training_inputs = None
         self._training_outputs = None
+        self._origin_inputs = None #for label encoder
         self._fitted = False
-        self._target_columns_metadata: List[Dict] = None
-        self._clf = Model('nb', bayesInf=1, PointInf=0)
-        self._LEoutput = preprocessing.LabelEncoder()
+        self._cate_flag = None
+        self._clf = Model('nb', bayesInf=1, PointInf=0) #classifier
+        self._LEoutput = preprocessing.LabelEncoder() #label encoder
+        self._Imputer = SimpleImputer(missing_values=np.nan, strategy='most_frequent') #imputer
+        self._nbins = 10
+        self._Kbins = preprocessing.KBinsDiscretizer(n_bins=self._nbins, encode='ordinal', strategy='uniform') #KbinsDiscretizer
+        self._discTrainset = None
         
     
     def _store_target_columns_metadata(self, outputs: Outputs) -> None:
@@ -104,22 +110,25 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
     #remove preprocessing
     def set_training_data(self, *, inputs: Inputs, outputs: Outputs) -> None:
 
-        # Update semantic types and prepare it for predicted targets
+        ## Update semantic types and prepare it for predicted targets
         self._store_target_columns_metadata(outputs)
         
-        
-        # set training labels
+        ## memory original training inputs
+        self._origin_inputs = inputs
+
+        ## set training labels
         metadata = outputs.metadata
         column_metadata = metadata.query((metadata_base.ALL_ELEMENTS, 0))
         semantic_types = column_metadata.get('semantic_types', [])
         if 'https://metadata.datadrivendiscovery.org/types/CategoricalData' in semantic_types:
             self._LEoutput.fit(outputs)
-            self._training_outputs = self._LEoutput.transform(outputs)
+            self._training_outputs = self._LEoutput.transform(outputs) #starting from zero
         
-        # convert categorical values to numerical values in training data
+        ## convert categorical values to numerical values in training data
         metadata = inputs.metadata
         [m,n] = inputs.shape
         self._training_inputs = np.zeros((m,n))
+        self._cate_flag = np.zeros((n,))
         for column_index in metadata.get_elements((metadata_base.ALL_ELEMENTS,)):
             if column_index is metadata_base.ALL_ELEMENTS: 
                 continue
@@ -128,7 +137,8 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
             if 'https://metadata.datadrivendiscovery.org/types/CategoricalData' in semantic_types:
                 LE = preprocessing.LabelEncoder()
                 LE = LE.fit(inputs.iloc[:,column_index])
-                self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])  
+                self._training_inputs[:,column_index] = LE.transform(inputs.iloc[:,column_index])
+                self._cate_flag[column_index] = 1
             elif 'http://schema.org/Text' in semantic_types:
                 pass
             else:
@@ -137,8 +147,7 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
                     if bool(temp[i]):
                         self._training_inputs[i,column_index] = float(temp[i])
                     else:
-                        ## TO DO: float nan
-                        self._training_inputs[i,column_index] = 'nan'
+                        self._training_inputs[i,column_index] = float('nan')
         self._fitted = False
     
 
@@ -149,16 +158,29 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
         if self._training_inputs.any() == None or self._training_outputs.any() == None: 
             raise ValueError('Missing training data, or missing values exist.')
 
-        discTrainset = RelationSet(self._training_inputs, self._training_outputs.reshape(-1, 1))
-        discTrainset.impute()
-        discTrainset.discretize() #starting from 1
-        # if original lable value is starting from 1, same label after discretization, prediction + 1
-        # if original label value is starting from 0, label += 1
+        ## impute missing values
+        self._Imputer.fit(self._training_inputs)
+        self._training_inputs = self._Imputer.transform(self._training_inputs)
+
+        ## discretize non-categorical values
+        disc_training_inputs = self._training_inputs
+        if not len(np.where(self._cate_flag == 0)[0]) == 0:
+            self._Kbins.fit(self._training_inputs[:, np.where(self._cate_flag == 0)[0]]) #find non-categorical values
+            temp = self._Kbins.transform(self._training_inputs[:, np.where(self._cate_flag == 0)[0]])
+            disc_training_inputs[:, np.where(self._cate_flag == 0)[0]] = temp
+        # starting from zero
+
+        ## get number of states for each feature and remove features with only one state
+        discTrainset = RelationSet(disc_training_inputs, self._training_outputs.reshape(-1,1))
+        discTrainset.getStateNo(self._cate_flag, self._nbins)
         discTrainset.remove()
-        X_train = discTrainset.data - 1
-        Y_train = discTrainset.labels - 1 
-        bins = discTrainset.NUM_STATES
-        stateNo = np.append(bins, len(np.unique(Y_train)))
+        X_train = discTrainset.data
+        Y_train = discTrainset.labels
+        
+        self._discTrainset = discTrainset
+        stateNo = np.append(discTrainset.NUM_STATES, len(np.unique(Y_train)))
+
+        ## fit the classifier
         self._clf.fit(X_train, Y_train, stateNo)
         self._fitted = True
 
@@ -167,13 +189,8 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
 
     def produce(self, *, inputs: Inputs, timeout: float = None, iterations: int = None) -> base.CallResult[Outputs]:  # inputs: m x n numpy array
         if self._fitted:
-            # get discrete bins from training data
-            discTrainset = RelationSet(self._training_inputs, self._training_outputs.reshape(-1, 1))
-            discTrainset.impute()
-            discTrainset.discretize()
-            discTrainset.remove()
-            bins = discTrainset.NUM_STATES
-            # convert categorical values to numerical values in testing data
+
+            ## convert categorical values to numerical values in testing data
             metadata = inputs.metadata
             [m, n] = inputs.shape
             X_test = np.zeros((m, n))
@@ -184,7 +201,7 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
                 semantic_types = column_metadata.get('semantic_types', [])
                 if 'https://metadata.datadrivendiscovery.org/types/CategoricalData' in semantic_types:
                     LE = preprocessing.LabelEncoder()
-                    LE = LE.fit(inputs.iloc[:, column_index])
+                    LE = LE.fit(self._origin_inputs.iloc[:, column_index]) #use training data to fit
                     X_test[:, column_index] = LE.transform(inputs.iloc[:, column_index])
                 elif 'http://schema.org/Text' in semantic_types:
                     pass
@@ -194,22 +211,28 @@ class NaiveBayes_BayesianInf(SupervisedLearnerPrimitiveBase[Inputs, Outputs, Par
                         if bool(temp[i]):
                             X_test[i, column_index] = float(temp[i])
                         else:
-                            X_test[i, column_index] = 'nan'
-            discTestset = RelationSet(X_test, [])
-            discTestset.impute()
-            X_test = discTestset.data
-            index_list = np.setdiff1d(np.arange(discTrainset.num_features),np.array(discTrainset.removeIdx))
-            X_test = X_test[:, index_list]
-            est = preprocessing.KBinsDiscretizer(n_bins=bins,encode='ordinal',strategy='uniform')
-            est.fit(X_test)
-            X_test = est.transform(X_test)
-            output = self._clf.predict(X_test)
-            if min(self._training_outputs) == 1:
-                output = output + 1
-            # label decode
+                            X_test[i, column_index] = float('nan')
+
+            ## impute testing data
+            X_test = self._Imputer.transform(X_test)
+
+            ## Kbins discretize for noncategorical values
+            disc_X_test = X_test
+            if not len(np.where(self._cate_flag == 0)[0]) == 0:
+                temp = self._Kbins.transform(X_test[:, np.where(self._cate_flag == 0)[0]])
+                disc_X_test[:,np.where(self._cate_flag == 0)[0]] = temp
+
+            ## remove columns with one states
+            index_list = np.setdiff1d(np.arange(self._discTrainset.num_features), np.array(self._discTrainset.removeIdx))
+            disc_X_test = disc_X_test[:, index_list]
+
+            ## prediction
+            output = self._clf.predict(disc_X_test)
+
+            ## label decode
             output = self._LEoutput.inverse_transform(output)
             
-            # update metadata
+            ## update metadata
             output = container.DataFrame(output, generate_metadata=False, source=self)
             output.metadata = inputs.metadata.clear(source=self, for_value=output, generate_metadata=True)
             

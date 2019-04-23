@@ -29,6 +29,8 @@ def are_independent(data, alpha=0.05, method='mi_test'):
 		return False
 
 def mutual_information(data, conditional=False):
+	#this sentence is for error when len(bins)>2, the joint will have error for float32
+	data = data.astype('int')
 	#bins = np.amax(data, axis=0)+1 # read levels for each variable
 	bins = unique_bins(data)
 	if len(bins) == 1:
@@ -86,6 +88,7 @@ def mutual_information(data, conditional=False):
 		ncols = len(bins)
 		for i in range(len(data)):
 			data[i,1] = ''.join(data[i,1:ncols])
+#		data = data.astype('float')
 		data = data.astype('int')[:,0:2]
 
 		hist,_ = np.histogramdd(data, bins=bins[0:2]) # frequency counts

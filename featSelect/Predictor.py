@@ -1,6 +1,7 @@
 from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
 from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.base import clone
+from sklearn.metrics import f1_score
 import numpy as np
 
 #----------------------- PREDICTOR -----------------------
@@ -30,7 +31,9 @@ class Predictor:
 
 	def score(self,selected_feats,cache):
 		if (selected_feats.tostring() in cache):
-			score = cache[selected_feats.tostring()]
+#			score = cache[selected_feats.tostring()]
+			predictions = self.predict(selected_feats)
+			score = self.score_from_labels(predictions)
 		else:	
 			predictions = self.predict(selected_feats)
 			score = self.score_from_labels(predictions)
@@ -79,7 +82,9 @@ class Classifier(Predictor):
 		return left_score - right_score
 
 	def score_from_labels(self,predictions):
-		return accuracy_score(self.testing_set.labels,predictions)
+		score = f1_score(self.testing_set.labels, predictions, average='macro')
+		return score
+#		return accuracy_score(self.testing_set.labels,predictions)
 
 class Regressor(Predictor):
 	def score_difference(self,left_score,right_score):
