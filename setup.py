@@ -9,6 +9,11 @@ setup(
 	description='RPI primitives for D3M submission.',
 	platforms=['Linux', 'MacOS'],
         keywords = 'd3m_primitive',
+        license='Apache-2.0',
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: Apache Software License",
+        ],
 	entry_points = {
 		'd3m.primitives': [
 			'feature_selection.simultaneous_markov_blanket.AutoRPI = rpi_d3m_primitives.STMBplus_auto:STMBplus_auto',
